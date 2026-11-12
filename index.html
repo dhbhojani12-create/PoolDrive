@@ -66,6 +66,7 @@ main{max-width:1100px;margin:0 auto;padding:16px 20px 120px}
 .nm{flex:1;min-width:0}
 .nm .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
 .nm .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lock{font-size:12px;margin-left:4px}
 .more{flex:none;border:0;background:transparent;padding:6px 8px;border-radius:8px;color:var(--muted);font-size:18px;line-height:1}
 .more:hover{background:var(--line)}
 .empty{padding:60px 20px;text-align:center;color:var(--muted)}
@@ -220,7 +221,8 @@ const SCOPE  = 'https://www.googleapis.com/auth/drive';
 const FOLDER = 'application/vnd.google-apps.folder';
 const API    = 'https://www.googleapis.com/drive/v3/';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
-const FIELDS = 'id,name,mimeType,size,modifiedTime,webViewLink,parents';
+const FIELDS = 'id,name,mimeType,size,modifiedTime,webViewLink,parents,appProperties';
+const isLockedF = f => f?.appProperties?.pooldriveLocked === '1';
 const MARGIN = 5 * 1024 * 1024;           // keep 5 MB spare in every account
 const PARALLEL = 3;                        // uploads at the same time
 const LS = { cfg: 'pooldrive.cfg.v1', acc: 'pooldrive.accounts.v1' };
@@ -417,6 +419,7 @@ function merge(groups) {
       let e = folders.get(f.name);
       if (!e) { e = { kind: 'folder', name: f.name, refs: [], modifiedTime: f.modifiedTime }; folders.set(f.name, e); }
       e.refs.push({ email, id: f.id });
+      if (isLockedF(f)) e.locked = true;
       if ((f.modifiedTime || '') > (e.modifiedTime || '')) e.modifiedTime = f.modifiedTime;
     } else files.push({ kind: 'file', ...f, email });
   }
@@ -456,7 +459,7 @@ async function doSearch() {
   res.forEach(x => {
     if (x.status !== 'fulfilled') return;
     for (const f of x.value.items) items.push(f.mimeType === FOLDER
-      ? { kind: 'folder', name: f.name, refs: [{ email: x.value.email, id: f.id }], modifiedTime: f.modifiedTime, fromSearch: true, email: x.value.email, id: f.id }
+      ? { kind: 'folder', name: f.name, refs: [{ email: x.value.email, id: f.id }], modifiedTime: f.modifiedTime, fromSearch: true, email: x.value.email, id: f.id, parents: f.parents, locked: isLockedF(f) }
       : { kind: 'file', ...f, email: x.value.email, fromSearch: true });
   });
   loading = false; renderList();
@@ -480,11 +483,11 @@ async function navigateNames(names) {
   for (const n of names) {
     const refs = locRefs(stack[stack.length - 1]); const found = [];
     await Promise.allSettled(refs.map(async r => {
-      const q = await api(accBy(r.email), 'files?' + qs({ q: `name='${escQ(n)}' and '${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id)' }));
-      q.files.forEach(f => found.push({ email: r.email, id: f.id }));
+      const q = await api(accBy(r.email), 'files?' + qs({ q: `name='${escQ(n)}' and '${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id,appProperties)' }));
+      q.files.forEach(f => found.push({ email: r.email, id: f.id, locked: isLockedF(f) }));
     }));
     if (!found.length) break;
-    stack.push({ name: n, refs: found });
+    stack.push({ name: n, refs: found.map(({ email, id }) => ({ email, id })), locked: found.some(f => f.locked) });
   }
   reload();
 }
@@ -496,7 +499,7 @@ async function goToLocation(it) {
     const names = await pathOf(a, target);
     await navigateNames(names);
   } catch (e) {
-    if (it.kind === 'folder') { clearSearch(); stack = [stack[0], { name: it.name, refs: it.refs }]; reload(); }
+    if (it.kind === 'folder') { clearSearch(); stack = [stack[0], { name: it.name, refs: it.refs, locked: !!it.locked }]; reload(); }
     else toast('This file is not inside your My Drive folders (it may be shared with you).', true);
   }
 }
@@ -573,7 +576,7 @@ function renderList() {
       ? ['Folder', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ')
       : [it.size ? fmt(+it.size) : (it.mimeType || '').startsWith('application/vnd.google-apps.') ? 'Google file' : '', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ');
     const on = selected.has(ikey(it));
-    return `<div class="row${on ? ' selected' : ''}" data-i="${i}"${drag ? ' draggable="true"' : ''}><input type="checkbox" class="sel" data-sel="${i}" ${on ? 'checked' : ''} title="Select">${icon}<div class="nm"><div class="t">${escH(it.name)}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
+    return `<div class="row${on ? ' selected' : ''}" data-i="${i}"${drag ? ' draggable="true"' : ''}><input type="checkbox" class="sel" data-sel="${i}" ${on ? 'checked' : ''} title="Select">${icon}<div class="nm"><div class="t">${escH(it.name)}${it.locked ? ' <span title="Locked" class="lock">🔒</span>' : ''}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
   }).join('') + '</div>';
   renderSelbar();
 }
@@ -612,6 +615,7 @@ const isInside = (target, src) => target.length >= src.length && src.every((n, i
 // Moves files/folders into the merged folder at targetNames. Each item stays in its own account
 // (instant, no extra space); the target folder is created in that account if it only exists elsewhere.
 async function moveItems(its, targetNames) {
+  { const why = await protectReason(its, 'move'); if (why) return toast(why, true); }
   if (!searchQ) {
     const here = curNames();
     if (samePath(here, targetNames)) { toast('Already in this folder'); return; }
@@ -840,7 +844,7 @@ function handleErr(e) {
 function openItem(it) {
   if (it.kind === 'folder') {
     if (it.fromSearch) return goToLocation(it);
-    stack.push({ name: it.name, refs: it.refs }); reload(); window.scrollTo(0, 0); return;
+    stack.push({ name: it.name, refs: it.refs, locked: !!it.locked }); reload(); window.scrollTo(0, 0); return;
   }
   openFile(it);
 }
@@ -876,7 +880,45 @@ async function downloadFile(f) {
   } catch (e) { handleErr(e); }
 }
 
+/* ---------------- Folder lock ----------------
+   Saved on the folder in Google Drive (appProperties), so it applies on every device.
+   Locked folder: can't be trashed, renamed or moved. Anything inside it: can't be trashed. */
+async function lockedAncestor(it) {           // name of a locked folder above this item, or ''
+  const a = accBy(it.email); if (!a) return '';
+  let cur = (it.parents || [])[0];
+  for (let i = 0; i < 40 && cur; i++) {
+    const f = await api(a, `files/${cur}?fields=name,parents,appProperties`);
+    if (isLockedF(f)) return f.name;
+    cur = (f.parents || [])[0];
+  }
+  return '';
+}
+async function protectReason(its, action) {
+  const lockedSelf = its.find(it => it.kind === 'folder' && it.locked);
+  if (lockedSelf) return `“${lockedSelf.name}” is locked. Unlock it first (⋯ → Unlock folder).`;
+  if (action !== 'delete') return '';
+  if (!searchQ) {
+    const up = stack.find(s => s.locked);
+    return up ? `This is inside the locked folder “${up.name}”. Unlock it first to delete things here.` : '';
+  }
+  for (const it of its) {
+    try { const n = await lockedAncestor(it); if (n) return `“${it.name}” is inside the locked folder “${n}”. Unlock it first.`; } catch {}
+  }
+  return '';
+}
+async function setLock(it, on) {
+  if (!on && !confirm(`Unlock “${it.name}”?\n\nIt and everything inside can then be deleted, renamed or moved again.`)) return;
+  const missing = it.refs.filter(r => !isLive(accBy(r.email)));
+  if (missing.length) return toast(`Reconnect ${missing[0].email} first. Part of this folder is stored there.`, true);
+  try {
+    await Promise.all(it.refs.map(r => api(accBy(r.email), `files/${r.id}?fields=id`,
+      jsonOpts('PATCH', { appProperties: { pooldriveLocked: on ? '1' : null } }))));
+    toast(on ? `🔒 “${it.name}” locked` : `“${it.name}” unlocked`); reload();
+  } catch (e) { handleErr(e); }
+}
+
 async function renameItem(it) {
+  { const why = await protectReason([it], 'rename'); if (why) return toast(why, true); }
   const n = prompt('Rename to', it.name);
   if (!n || !n.trim() || n === it.name) return;
   try {
@@ -888,6 +930,7 @@ async function renameItem(it) {
 
 async function deleteItems(its) {
   if (!its.length) return;
+  { const why = await protectReason(its, 'delete'); if (why) return toast(why, true); }
   const one = its.length === 1 ? its[0] : null;
   const many = one && one.kind === 'folder' && one.refs.length > 1;
   const what = one ? `“${one.name}”` : `${its.length} items`;
@@ -915,7 +958,7 @@ async function newFolder() {
 function openMenu(it, anchor) {
   const m = $('#menu');
   const acts = it.kind === 'folder'
-    ? [['open', 'Open'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], '-', ['delete', 'Move to trash']]
+    ? [['open', 'Open'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], it.locked ? ['unlock', '🔓 Unlock folder'] : ['lock', '🔒 Lock folder'], '-', ['delete', 'Move to trash']]
     : [['open', 'Open'], ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
   m.innerHTML = acts.map(a => a === '-' ? '<hr>' : `<button data-act="${a[0]}" class="${a[0] === 'delete' ? 'danger' : ''}">${a[1]}</button>`).join('');
   m.classList.remove('hidden');
@@ -926,6 +969,7 @@ function openMenu(it, anchor) {
     const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
     closeMenu();
     ({ open: () => openItem(it), download: () => downloadFile(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
+       lock: () => setLock(it, true), unlock: () => setLock(it, false),
        locate: () => goToLocation(it), drive: () => window.open(driveLink(it), '_blank', 'noopener'), delete: () => deleteItem(it) })[act]();
   };
 }
