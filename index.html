@@ -1420,9 +1420,10 @@ async function openFile(f) {
   // Word, Excel, PowerPoint, zip and everything else: open in Google Drive's online viewer (Download stays in the ⋯ menu)
   if (!['image', 'pdf', 'text'].includes(t)) { window.open(driveLink(f), '_blank', 'noopener'); return; }
   showModal(`<div class="sheet-head"><div class="t">${escH(f.name)}</div>
-      <button id="pvDl">Download</button><button data-close>✕</button></div>
+      ${canShareOut ? '<button id="pvSh">Share</button>' : ''}<button id="pvDl">Download</button><button data-close>✕</button></div>
       <div class="pv" id="pv"><div class="spinner"></div></div>`, 'preview', { wide: true });
   $('#pvDl').onclick = () => downloadFile(f);
+  if ($('#pvSh')) $('#pvSh').onclick = () => shareFile(f);
   try {
     const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true });
     const blob = await r.blob();
@@ -1442,6 +1443,26 @@ async function downloadFile(f) {
     const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch (e) { handleErr(e); }
+}
+
+// Share a file to WhatsApp, Gmail etc. through the phone's Share menu
+const canShareOut = !!navigator.share;
+async function shareFile(f) {
+  if ((f.mimeType || '').startsWith('application/vnd.google-apps.')) { try { await navigator.share({ title: f.name, url: driveLink(f) }); } catch {} return; }
+  toast('Getting ' + f.name + ' ready to share…');
+  let file;
+  try {
+    const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true });
+    const b = await r.blob();
+    file = new File([b], f.name, { type: f.mimeType || b.type || 'application/octet-stream' });
+  } catch (e) { return handleErr(e); }
+  if (navigator.canShare && !navigator.canShare({ files: [file] })) { toast("This file type can't be shared from here. Use Download instead.", true); return; }
+  const go = async () => { try { await navigator.share({ files: [file], title: f.name }); } catch (e) { if (e.name === 'NotAllowedError') return 'again'; } };
+  if (await go() === 'again') {   // the download took a while, so the phone wants one more tap
+    showModal(`<h2>Ready to share</h2><p class="sub">“${escH(f.name)}” is ready.</p>
+      <div class="right"><button data-close>Cancel</button><button class="primary" id="shGo">Share</button></div>`, 'share');
+    $('#shGo').onclick = () => { closeModal(); go(); };
+  }
 }
 
 /* ---------------- Folder lock ----------------
@@ -1529,7 +1550,7 @@ function openMenu(it, anchor) {
   const m = $('#menu');
   const acts = it.kind === 'folder'
     ? [['open', 'Open'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], it.locked ? ['unlock', '🔓 Unlock folder'] : ['lock', '🔒 Lock folder'], '-', ['delete', 'Move to trash']]
-    : [['open', 'Open'], ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
+    : [['open', 'Open'], ...(canShareOut ? [['share', 'Share…']] : []), ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
   m.innerHTML = acts.map(a => a === '-' ? '<hr>' : `<button data-act="${a[0]}" class="${a[0] === 'delete' ? 'danger' : ''}">${a[1]}</button>`).join('');
   m.classList.remove('hidden');
   const r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
@@ -1538,7 +1559,7 @@ function openMenu(it, anchor) {
   m.onclick = e => {
     const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
     closeMenu();
-    ({ open: () => openItem(it), download: () => downloadFile(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
+    ({ open: () => openItem(it), download: () => downloadFile(it), share: () => shareFile(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
        lock: () => setLock(it, true), unlock: () => setLock(it, false),
        locate: () => goToLocation(it), drive: () => window.open(driveLink(it), '_blank', 'noopener'), delete: () => deleteItem(it) })[act]();
   };
