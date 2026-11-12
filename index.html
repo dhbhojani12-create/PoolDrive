@@ -946,7 +946,7 @@ function planUpload(entries) {
     const u = queue.shift(), need = size(u), a = pick(need);
     if (a) {
       free.set(a.email, free.get(a.email) - need);
-      u.forEach(e => planned.push({ file: e.file, acc: a, path: [...base, ...e.dirs] }));
+      u.forEach(e => planned.push({ file: e.file, name: e.name || e.file.name, acc: a, path: [...base, ...e.dirs] }));
     } else if (u.length > 1) {
       u.forEach(e => queue.push([e]));            // folder too big for one account: spread its files
       queue.sort((x, y) => size(y) - size(x));
@@ -955,12 +955,105 @@ function planUpload(entries) {
   return { planned, tooBig };
 }
 
-function startUpload(entries) {
+/* ---- same-name check: Replace / Keep both / Skip ---- */
+// Find a folder by names without creating anything. Returns id or null.
+async function lookupFolder(a, names) {
+  if (!names.length) return 'root';
+  const k = fkey(a.email, names);
+  if (fcache.has(k)) { try { return await fcache.get(k); } catch {} }
+  const parent = await lookupFolder(a, names.slice(0, -1));
+  if (!parent) return null;
+  const r = await api(a, 'files?' + qs({ q: `name='${escQ(names[names.length - 1])}' and '${parent}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id)', pageSize: 1 }));
+  if (!r.files.length) return null;
+  fcache.set(k, Promise.resolve(r.files[0].id));
+  return r.files[0].id;
+}
+
+async function findConflicts(entries) {
+  const base = curNames(), byPath = new Map();
+  for (const e of entries) {
+    const path = [...base, ...e.dirs], k = path.join('/');
+    if (!byPath.has(k)) byPath.set(k, { path, list: [] });
+    byPath.get(k).list.push(e);
+  }
+  const out = [], groups = [...byPath.values()];
+  for (let g = 0; g < groups.length; g += 5) {                 // 5 folders at a time
+    await Promise.all(groups.slice(g, g + 5).map(async ({ path, list }) => {
+      const existing = new Map(), names = new Set();
+      await Promise.all(live().map(async a => {
+        try {
+          const id = await lookupFolder(a, path); if (!id) return;
+          for (const f of await listChildren(a, id)) {
+            names.add(f.name);
+            if (f.mimeType !== FOLDER && !existing.has(f.name)) existing.set(f.name, { ...f, email: a.email });
+          }
+        } catch {}
+      }));
+      for (const e of list) {
+        e.taken = names;
+        const ex = existing.get(e.file.name);
+        if (ex) out.push({ e, ex, path });
+      }
+    }));
+  }
+  return out;
+}
+
+function askConflicts(conflicts) {
+  return new Promise(resolve => {
+    const dec = new Map(); let i = 0;
+    const sheet = $('#sheet');
+    const show = () => {
+      if (i >= conflicts.length) { sheet.onclick = null; $('#modal').dataset.locked = ''; closeModal(); return resolve(dec); }
+      const { e, ex, path } = conflicts[i], left = conflicts.length - i;
+      const native = (ex.mimeType || '').startsWith('application/vnd.google-apps.');
+      showModal(`<h2>File already exists</h2>
+        <p class="sub">“<b>${escH(e.file.name)}</b>” is already in <b>${escH(path.length ? path.join(' / ') : 'All files')}</b>.${left > 1 ? ` (${left} conflicts left)` : ''}</p>
+        <div class="info-row"><b>Existing</b><span>${ex.size ? fmt(+ex.size) : 'Google file'} · ${escH(fmtDate(ex.modifiedTime))}</span></div>
+        <div class="info-row"><b>New</b><span>${fmt(e.file.size)} · ${escH(fmtDate(e.file.lastModified))}</span></div>
+        ${left > 1 ? `<label class="check"><input type="checkbox" id="cfAll"><span>Do this for all ${left} conflicts</span></label>` : ''}
+        <div class="right"><button data-cf="skip">Skip</button><button data-cf="keep">Keep both</button><button class="primary" data-cf="replace" ${native ? 'disabled title="Google Docs/Sheets can\'t be replaced by an upload"' : ''}>Replace</button></div>
+        <div class="note">Replace keeps the old version in Google Drive's version history for 30 days.</div>`, 'conflict', { locked: true });
+      sheet.onclick = ev => {
+        const c = ev.target.closest('[data-cf]')?.dataset.cf; if (!c) return;
+        if ($('#cfAll')?.checked) { for (; i < conflicts.length; i++) dec.set(conflicts[i].e, c === 'replace' && (conflicts[i].ex.mimeType || '').startsWith('application/vnd.google-apps.') ? 'keep' : c); }
+        else { dec.set(conflicts[i].e, c); i++; }
+        show();
+      };
+    };
+    show();
+  });
+}
+
+function uniqueName(name, taken) {
+  const dot = name.lastIndexOf('.'), stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+  for (let n = 1; ; n++) { const c = `${stem} (${n})${ext}`; if (!taken.has(c)) { taken.add(c); return c; } }
+}
+
+async function startUpload(entries) {
   entries = entries.filter(e => e.file);
   if (!entries.length) return;
   if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
   if (searchQ) { clearSearch(); reload(); }
-  const { planned, tooBig } = planUpload(entries);
+
+  if (entries.length > 20) toast('Checking for files that already exist…');
+  const conflicts = await findConflicts(entries);
+  const replaceJobs = [];
+  if (conflicts.length) {
+    const dec = await askConflicts(conflicts);
+    const exOf = new Map(conflicts.map(c => [c.e, c.ex]));
+    entries = entries.filter(e => {
+      const d = dec.get(e); if (!d) return true;
+      if (d === 'skip') return false;
+      if (d === 'keep') { e.name = uniqueName(e.file.name, e.taken); return true; }
+      const ex = exOf.get(e);
+      replaceJobs.push({ file: e.file, name: ex.name, acc: accBy(ex.email), path: [...curNames(), ...e.dirs], replaceId: ex.id, oldSize: +ex.size || 0 });
+      return false;
+    });
+  }
+  const { planned, tooBig } = entries.length ? planUpload(entries) : { planned: [], tooBig: [] };
+  planned.push(...replaceJobs);
+  if (!planned.length && !tooBig.length) return toast('Nothing to upload');
   if (tooBig.length) {
     const most = Math.max(...live().map(freeOf));
     const list = tooBig.slice(0, 6).map(f => `• ${f.name} (${fmt(f.size)})`).join('\n') + (tooBig.length > 6 ? `\n…and ${tooBig.length - 6} more` : '');
@@ -989,20 +1082,21 @@ function pump() {
 async function runJob(j) {
   j.status = 'uploading'; renderUploads();
   try {
-    const parent = await ensureFolderPath(j.acc, j.path);
-    await uploadFile(j.acc, j.file, parent, l => { j.loaded = l; scheduleUploadsRender(); });
+    const parent = j.replaceId ? null : await ensureFolderPath(j.acc, j.path);
+    await uploadFile(j.acc, j.file, parent, l => { j.loaded = l; scheduleUploadsRender(); }, j.name, j.replaceId);
     j.loaded = j.file.size; j.status = 'done';
-    j.acc.usage += j.file.size; saveAcc(); renderSpace();
+    j.acc.usage += j.file.size - (j.oldSize || 0); saveAcc(); renderSpace();
   } catch (e) { j.status = 'error'; j.err = e instanceof AuthErr ? 'Sign-in expired. Reconnect and retry.' : e.message; }
   renderUploads();
 }
 
-async function uploadFile(a, file, parentId, onProgress) {
+async function uploadFile(a, file, parentId, onProgress, name, replaceId) {
   if (!isLive(a)) throw new AuthErr(a);
   const type = file.type || 'application/octet-stream';
-  const meta = { name: file.name, parents: [parentId] };
-  const init = await fetch(UPLOAD + '?uploadType=resumable&fields=id', {
-    method: 'POST',
+  const meta = replaceId ? {} : { name: name || file.name, parents: [parentId] };
+  const url = replaceId ? `${UPLOAD}/${replaceId}` : UPLOAD, method = replaceId ? 'PATCH' : 'POST';
+  const init = await fetch(url + '?uploadType=resumable&fields=id', {
+    method,
     headers: { Authorization: 'Bearer ' + a.token, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type },
     body: JSON.stringify(meta)
   });
@@ -1013,7 +1107,7 @@ async function uploadFile(a, file, parentId, onProgress) {
   // Fallback if the browser hides the session URL: one-shot multipart upload
   const b = 'pooldrive' + Math.random().toString(36).slice(2);
   const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${type}\r\n\r\n`, file, `\r\n--${b}--`]);
-  return sendXHR('POST', UPLOAD + '?uploadType=multipart&fields=id', body,
+  return sendXHR(method, url + '?uploadType=multipart&fields=id', body,
     { Authorization: 'Bearer ' + a.token, 'Content-Type': 'multipart/related; boundary=' + b }, l => onProgress(Math.min(l, file.size)));
 }
 
@@ -1058,7 +1152,7 @@ function renderUploads() {
       const st = j.status === 'done' ? '<span class="st ok">✓</span>' : j.status === 'error' ? '<span class="st err">Failed</span>'
         : j.status === 'uploading' ? `<span class="st">${p}%</span>` : '<span class="st">Waiting</span>';
       const sub = j.status === 'error' ? j.err : `${fmt(j.file.size)}${j.path.length ? ' · ' + j.path.join(' / ') : ''}`;
-      return `<div class="up-item"><div class="nm"><div class="t">${escH(j.file.name)}</div><div class="s">${escH(sub)}</div></div>${st}</div>`;
+      return `<div class="up-item"><div class="nm"><div class="t">${escH(j.name || j.file.name)}${j.replaceId ? ' <span class="chip">replace</span>' : ''}</div><div class="s">${escH(sub)}</div></div>${st}</div>`;
     }).join('')}</div>`;
   $('#upToggle').onclick = () => { panelOpen = !panelOpen; renderUploads(); };
   const c = $('#upClose'); if (c) c.onclick = () => { jobs = []; renderUploads(); };
