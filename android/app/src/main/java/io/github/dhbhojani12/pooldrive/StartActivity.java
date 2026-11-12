@@ -76,6 +76,7 @@ public class StartActivity extends Activity {
         Intent i = new Intent(this, LauncherActivity.class);
         i.setAction(Intent.ACTION_MAIN);
         i.addCategory(Intent.CATEGORY_LAUNCHER);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);   // always a fresh start, never an old share
         startActivity(i);
         finish();
     }
