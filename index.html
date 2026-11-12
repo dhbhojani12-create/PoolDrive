@@ -36,8 +36,8 @@ button:disabled{opacity:.5;cursor:default}
 .banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 20px;background:#fff6e5;color:#7a4b00;border-bottom:1px solid #f3dca8;font-size:14px}
 @media (prefers-color-scheme:dark){.banner{background:#2f2410;color:#f5cf86;border-color:#4a3812}}
 .banner button{padding:4px 10px;font-size:13px}
-#btnAccounts{position:relative}
-#btnAccounts.alert::after{content:"";position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--danger);border:2px solid var(--card)}
+.acc-btn{position:relative}
+.acc-btn.alert::after{content:"";position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--danger);border:2px solid var(--card)}
 
 main{max-width:1100px;margin:0 auto;padding:16px 20px 120px}
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
@@ -164,40 +164,189 @@ code,.code{background:var(--accent-soft);color:var(--accent);padding:1px 6px;bor
   .actions select{flex:1}
   .hide-sm{display:none}
 }
+
+/* ---------- full-width shell ---------- */
+.top{display:none}
+.shell{display:flex;min-height:100vh}
+.side{flex:0 0 256px;box-sizing:border-box;background:var(--card);border-right:1px solid var(--line);padding:20px 16px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow:auto}
+.side .brand{padding:0 6px}
+.side-btns{display:flex;flex-direction:column;gap:8px}
+.side-btns button{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;font-size:14px;text-align:left;width:100%;color:var(--text)}
+.nav button:hover{background:var(--hover)}
+.nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.storage{margin-top:auto;border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.storage .head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600}
+.storage .head button{padding:4px 10px;font-size:13px;color:var(--accent);font-weight:500}
+.storage .big{font-size:22px;font-weight:700}
+.storage .big small{font-size:13px;font-weight:400;color:var(--muted)}
+.segbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;display:flex}
+.segbar>i{display:block;height:100%}
+.acc-list{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.acc-row{display:flex;align-items:center;gap:8px}
+.acc-row span:nth-child(2){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-row .f{color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.content{flex:1;min-width:0}
+main{max-width:none;margin:0;padding:24px 40px 120px}
+.toolbar .search{max-width:640px;flex:1 1 360px;margin-left:0}
+body[data-mode="analysis"] .vtoggle,body[data-mode="analysis"] .actions,body[data-mode="analysis"] #crumbs{display:none}
+body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
+.vtoggle{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:3px}
+.vtoggle button{width:38px;height:32px;border:0;border-radius:8px;padding:0;display:grid;place-items:center;background:transparent;color:var(--muted)}
+.vtoggle button.on{background:var(--accent-soft);color:var(--accent)}
+.section-h{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 12px}
+.section-h h2{margin:0;font-size:15px;font-weight:600;color:var(--muted)}
+.section-h span{font-size:13px;color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;margin-bottom:24px}
+.fcard{position:relative;display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--card);cursor:pointer;user-select:none;min-width:0}
+.fcard:hover{border-color:var(--accent)}
+.fcard.selected{background:var(--accent-soft);border-color:var(--accent)}
+.fcard.drop-on{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+.fcard.dragging{opacity:.45}
+.fcard .tr{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.fcard .tr .r{display:flex;align-items:center;gap:6px}
+.fcard .ic.folder{width:auto;height:auto}
+.fcard .ic.folder svg{width:42px;height:42px}
+.fcard .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcard .s{font-size:12.5px;color:var(--muted)}
+.fcard .more{position:absolute;right:8px;bottom:8px}
+.fcard .sel{width:18px;height:18px;margin:0;accent-color:var(--accent);opacity:.3}
+.fcard:hover .sel,.fcard.selected .sel,.selecting .fcard .sel{opacity:1}
+@media (pointer:coarse){.fcard .sel{opacity:1}}
+.lockchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:#8a5a00;background:#fff4d6;padding:3px 8px;border-radius:99px}
+@media (prefers-color-scheme:dark){.lockchip{background:#3a2c0a;color:#f5cf86}}
+.mobile-top,.mnav,.fab,#mNewFolder{display:none}
+/* analysis */
+.ana-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:18px}
+.ana-head h1{margin:0;font-size:24px}
+.ana-head p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.card{border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.typebar{height:14px;border-radius:99px;overflow:hidden;display:flex;background:var(--line);margin:12px 0}
+.typebar>i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:13px}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:10px;height:10px;border-radius:3px;display:block}
+.atabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.atab{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px;border-radius:14px;text-align:left;border:1px solid var(--line);background:var(--card)}
+.atab b{font-size:22px}
+.atab small{font-size:12.5px;color:var(--muted)}
+.atab span{font-size:13px;font-weight:600}
+.atab.on{border:2px solid var(--accent);background:var(--accent-soft)}
+.atab.on span{color:var(--accent)}
+.apanel-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.apanel-h h2{margin:0;font-size:16px}
+.apanel-h p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.btn-danger{background:#fde8e8;color:#b42323;border-color:transparent;font-weight:600}
+@media (prefers-color-scheme:dark){.btn-danger{background:#3a1a1c;color:#ff9b9b}}
+.arow{display:grid;grid-template-columns:24px minmax(0,3fr) minmax(0,2.4fr) minmax(0,1.1fr);gap:16px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--line);font-size:14px}
+.arow:last-child{border-bottom:0}
+.arow input{width:18px;height:18px;margin:0;accent-color:var(--accent)}
+.arow .nmx{display:flex;align-items:center;gap:12px;min-width:0}
+.arow .nmx a{color:var(--text);text-decoration:none;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.arow .nmx a:hover{color:var(--accent)}
+.arow .path{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sizebar{display:flex;flex-direction:column;gap:5px}
+.sizebar b{font-weight:600}
+.sizebar i{display:block;height:4px;border-radius:99px;background:var(--accent-soft);overflow:hidden}
+.sizebar i>i{background:var(--accent)}
+.dgroup{padding:14px 20px;border-bottom:1px solid var(--line)}
+.dgroup:last-child{border-bottom:0}
+.dgroup .h{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.dgroup .h .n{flex:1 1 240px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dgroup .h .m{font-size:13px;color:var(--muted)}
+.dgroup .places{display:flex;flex-direction:column;gap:4px;padding:8px 0 0 48px;font-size:13px;color:var(--muted)}
+.dgroup .places b{color:var(--ok);font-weight:600}
+.ana-note{font-size:12.5px;color:var(--muted);margin-top:12px}
+.progress{padding:50px 20px;text-align:center;color:var(--muted)}
+
+@media (max-width:760px){
+  .side{display:none}
+  .mobile-top{display:flex;flex-direction:column;gap:10px;background:var(--card);border-bottom:1px solid var(--line);padding:14px 14px 12px;position:sticky;top:0;z-index:20}
+  .mobile-top .row1{display:flex;align-items:center;gap:10px}
+  .mobile-top .row1 .brand{flex:1}
+  .mobile-top .st{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+  .mobile-top .st b{color:var(--text)}
+  .mnav{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 0}
+  .mnav button{flex:none;border-radius:99px;padding:7px 14px;font-size:13.5px}
+  .mnav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{padding:12px 12px 120px}
+  .toolbar .search{flex-basis:100%;max-width:none;order:2;margin:0}
+  .crumbs{order:1}
+  .vtoggle{order:3}
+  .actions{order:4;flex:1}
+  #mNewFolder{display:inline-flex}
+  .fgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .fcard{padding:12px}
+  .fcard .ic.folder svg{width:34px;height:34px}
+  .fab{display:flex;align-items:center;gap:8px;position:fixed;right:18px;bottom:22px;z-index:35;height:56px;padding:0 22px;border-radius:18px;border:0;background:var(--accent);color:#fff;font-weight:600;font-size:15px;box-shadow:0 8px 24px rgba(79,70,229,.35)}
+  .atabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .arow{grid-template-columns:24px minmax(0,1fr) auto;}
+  .arow .path{display:none}
+}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <div class="brand"><div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>PoolDrive</div>
-  <div class="space" id="space" title="Open accounts">
-    <div class="space-text"><span><b id="freeTxt">—</b> free</span><span id="totalTxt"></span></div>
-    <div class="bar" id="totalBar"><i style="width:0"></i></div>
+<div class="shell">
+<aside class="side">
+  <div class="brand"><div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>PoolDrive</div>
+  <div class="side-btns">
+    <button id="btnUpload" class="primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>Upload</button>
+    <button id="btnNewFolder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New folder</button>
   </div>
-  <button id="btnAccounts">Accounts</button>
-</header>
-<div id="banner" class="banner hidden"></div>
+  <nav class="nav" aria-label="Sections">
+    <button data-nav="files" class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>All files</button>
+    <button data-nav="recent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent</button>
+    <button data-nav="locked"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked folders</button>
+    <button data-nav="analysis"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
+    <button data-nav="trash"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Trash</button>
+  </nav>
+  <div class="storage">
+    <div class="head"><span>Storage</span><button class="ghost acc-btn" id="btnAccounts">Accounts</button></div>
+    <div class="big"><span id="freeTxt">—</span> <small>free</small></div>
+    <div class="segbar" id="totalBar"></div>
+    <div id="totalTxt" style="font-size:12.5px;color:var(--muted)"></div>
+    <div class="acc-list" id="accList"></div>
+  </div>
+</aside>
 
-<main>
-  <div class="toolbar">
-    <nav class="crumbs" id="crumbs"></nav>
-    <label class="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search" type="search" placeholder="Search all accounts" autocomplete="off">
-    </label>
-    <div class="actions">
-      <select id="sort" title="Sort">
-        <option value="name">Name</option>
-        <option value="modified">Last modified</option>
-        <option value="size">Size</option>
-      </select>
-      <button id="btnNewFolder">+ Folder</button>
-      <button id="btnUpload" class="primary">Upload</button>
-    </div>
+<div class="content">
+  <div class="mobile-top">
+    <div class="row1"><div class="brand"><div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>PoolDrive</div><button class="acc-btn" id="mAccounts" aria-label="Accounts">Accounts</button></div>
+    <div><div class="st"><span><b id="mFree">—</b> free</span><span id="mTotal"></span></div><div class="segbar" id="mBar" style="height:6px;margin-top:6px"></div></div>
   </div>
-  <div id="selbar" class="selbar hidden"></div>
-  <div id="list"></div>
-</main>
+  <div class="mnav" aria-label="Sections">
+    <button data-nav="files" class="on">All files</button><button data-nav="recent">Recent</button><button data-nav="locked">Locked</button><button data-nav="analysis">Analysis</button>
+  </div>
+  <div id="banner" class="banner hidden"></div>
+  <main>
+    <div class="toolbar">
+      <nav class="crumbs" id="crumbs"></nav>
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search all accounts" autocomplete="off" aria-label="Search all accounts">
+      </label>
+      <div class="vtoggle" role="group" aria-label="View">
+        <button id="vGrid" aria-label="Grid view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+        <button id="vList" aria-label="List view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
+      </div>
+      <div class="actions">
+        <select id="sort" title="Sort" aria-label="Sort">
+          <option value="name">Name</option>
+          <option value="modified">Last modified</option>
+          <option value="size">Size</option>
+        </select>
+        <button id="mNewFolder">+ Folder</button>
+      </div>
+    </div>
+    <div id="selbar" class="selbar hidden"></div>
+    <div id="list"></div>
+  </main>
+</div>
+</div>
+<button class="fab" id="fabUpload"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>Upload</button>
 
 <input type="file" id="fileInput" multiple hidden>
 <input type="file" id="folderInput" webkitdirectory multiple hidden>
@@ -429,11 +578,61 @@ function merge(groups) {
 /* ---------------- Loading & search ---------------- */
 let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
 
+let mode = 'files';   // files | recent | locked | analysis
+function setMode(m) {
+  if (m === 'trash') return trashMenu();
+  mode = m;
+  if (m !== 'files') clearSearch();
+  document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === mode));
+  reload(); window.scrollTo(0, 0);
+}
+function trashMenu() {
+  const live_ = accounts;
+  if (live_.length === 1) return window.open('https://drive.google.com/drive/trash?authuser=' + encodeURIComponent(live_[0].email), '_blank', 'noopener');
+  const m = $('#menu');
+  m.innerHTML = '<div style="padding:6px 12px;font-size:12.5px;color:var(--muted)">Open Google Drive Trash for:</div>' +
+    live_.map(a => `<button data-tr="${escH(a.email)}">${escH(a.email)}</button>`).join('');
+  m.classList.remove('hidden');
+  const r = document.querySelector('.nav [data-nav="trash"]').getBoundingClientRect();
+  m.style.left = (r.right + 6) + 'px'; m.style.top = Math.max(8, Math.min(r.top, innerHeight - m.offsetHeight - 8)) + 'px';
+  m.onclick = e => { const b = e.target.closest('[data-tr]'); if (!b) return; closeMenu(); window.open('https://drive.google.com/drive/trash?authuser=' + encodeURIComponent(b.dataset.tr), '_blank', 'noopener'); };
+}
+
+async function loadRecent() {
+  const seq = ++loadSeq; loading = true; renderList();
+  const res = await Promise.allSettled(live().map(async a => {
+    const r = await api(a, 'files?' + qs({ q: `trashed=false and mimeType!='${FOLDER}' and 'me' in owners`, orderBy: 'modifiedTime desc', fields: `files(${FIELDS})`, pageSize: 50 }));
+    return r.files.map(f => ({ kind: 'file', ...f, email: a.email, fromSearch: true }));
+  }));
+  if (seq !== loadSeq) return;
+  items = res.filter(x => x.status === 'fulfilled').flatMap(x => x.value)
+    .sort((a, b) => (b.modifiedTime || '').localeCompare(a.modifiedTime || '')).slice(0, 80);
+  loading = false; renderList();
+}
+async function loadLocked() {
+  const seq = ++loadSeq; loading = true; renderList();
+  const res = await Promise.allSettled(live().map(async a => {
+    const r = await api(a, 'files?' + qs({ q: `appProperties has { key='pooldriveLocked' and value='1' } and trashed=false`, fields: `files(${FIELDS})`, pageSize: 200 }));
+    return r.files.map(f => ({ kind: 'folder', name: f.name, refs: [{ email: a.email, id: f.id }], modifiedTime: f.modifiedTime, fromSearch: true, email: a.email, id: f.id, parents: f.parents, locked: true }));
+  }));
+  if (seq !== loadSeq) return;
+  const byName = new Map();          // same-name locked folders in several accounts = one card
+  res.filter(x => x.status === 'fulfilled').flatMap(x => x.value).forEach(f => {
+    const e = byName.get(f.name); if (e) e.refs.push(...f.refs); else byName.set(f.name, f);
+  });
+  items = [...byName.values()];
+  loading = false; renderList();
+}
+
 async function reload() {
   selected.clear();
+  document.body.dataset.mode = searchQ ? 'files' : mode;
   renderCrumbs();
   if (!cfg.clientId) return renderList();
   if (!accounts.length) { items = []; return renderList(); }
+  if (mode === 'analysis') return renderAnalysis();
+  if (mode === 'recent' && !searchQ) return loadRecent();
+  if (mode === 'locked' && !searchQ) return loadLocked();
   if (searchQ) return doSearch();
   const seq = ++loadSeq;
   const refs = locRefs(stack[stack.length - 1]);
@@ -480,6 +679,7 @@ async function pathOf(a, id) {
 // Walk the merged tree by names so the folder shows its content from every account.
 async function navigateNames(names) {
   clearSearch(); stack = [stack[0]];
+  if (mode !== 'files') { mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); }
   for (const n of names) {
     const refs = locRefs(stack[stack.length - 1]); const found = [];
     await Promise.allSettled(refs.map(async r => {
@@ -499,7 +699,7 @@ async function goToLocation(it) {
     const names = await pathOf(a, target);
     await navigateNames(names);
   } catch (e) {
-    if (it.kind === 'folder') { clearSearch(); stack = [stack[0], { name: it.name, refs: it.refs, locked: !!it.locked }]; reload(); }
+    if (it.kind === 'folder') { clearSearch(); mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); stack = [stack[0], { name: it.name, refs: it.refs, locked: !!it.locked }]; reload(); }
     else toast('This file is not inside your My Drive folders (it may be shared with you).', true);
   }
 }
@@ -524,6 +724,8 @@ const FOLDER_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="curren
 
 function renderCrumbs() {
   const c = $('#crumbs');
+  const titles = { recent: 'Recent', locked: 'Locked folders', analysis: 'Analysis' };
+  if (!searchQ && titles[mode]) { c.innerHTML = `<a class="cur">${titles[mode]}</a>`; return; }
   if (searchQ) { c.innerHTML = `<button class="up" data-c="clear" title="Back to folders">←</button><a data-c="clear">All files</a><span class="sep">›</span><a class="cur">Search: “${escH(searchQ)}”</a>`; return; }
   const last = stack.length - 1;
   // long paths: All files › … › parent › current
@@ -545,7 +747,7 @@ function crumbMenu(anchor) {
 }
 
 function sortedItems() {
-  const s = cfg.sort;
+  const s = mode === 'recent' && !searchQ ? 'modified' : cfg.sort;
   return [...items].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
     if (s === 'modified') return (b.modifiedTime || '').localeCompare(a.modifiedTime || '');
@@ -563,13 +765,17 @@ function renderList() {
     el.innerHTML = `<div class="list empty"><h3>Add your first Google account</h3><p>Add every Google account you want to pool. Their free space is combined into one drive.</p><button class="primary" onclick="addAccount()">+ Add Google account</button></div>`; return;
   }
   if (loading) { el.innerHTML = '<div class="list"><div class="spinner"></div></div>'; return; }
+  if (mode === 'analysis' && !searchQ) return renderAnalysis();
   view = sortedItems();
   if (!view.length) {
-    el.innerHTML = `<div class="list empty">${searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
-      : `<h3>This folder is empty</h3><p>Drop files here or tap Upload.</p>`}</div>`; return;
+    const msg = searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
+      : mode === 'recent' ? '<h3>Nothing yet</h3><p>Files you add or change show up here.</p>'
+      : mode === 'locked' ? '<h3>No locked folders</h3><p>Lock a folder from its ⋯ menu to protect it from being deleted.</p>'
+      : '<h3>This folder is empty</h3><p>Drop files here or tap Upload.</p>';
+    el.innerHTML = `<div class="list empty">${msg}</div>`; return;
   }
   const drag = !isTouch;
-  el.innerHTML = `<div class="list${selected.size ? ' selecting' : ''}">` + view.map((it, i) => {
+  const rowOf = (it, i) => {
     const [t, label, color] = typeOf(it);
     const icon = t === 'folder' ? `<span class="ic folder">${FOLDER_SVG}</span>` : `<span class="ic" style="--c:${color}">${label}</span>`;
     const meta = it.kind === 'folder'
@@ -577,7 +783,25 @@ function renderList() {
       : [it.size ? fmt(+it.size) : (it.mimeType || '').startsWith('application/vnd.google-apps.') ? 'Google file' : '', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ');
     const on = selected.has(ikey(it));
     return `<div class="row${on ? ' selected' : ''}" data-i="${i}"${drag ? ' draggable="true"' : ''}><input type="checkbox" class="sel" data-sel="${i}" ${on ? 'checked' : ''} title="Select">${icon}<div class="nm"><div class="t">${escH(it.name)}${it.locked ? ' <span title="Locked" class="lock">🔒</span>' : ''}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
-  }).join('') + '</div>';
+  };
+  const cardOf = (it, i) => {
+    const on = selected.has(ikey(it));
+    const meta = ['Folder', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ');
+    return `<div class="fcard${on ? ' selected' : ''}" data-i="${i}"${drag ? ' draggable="true"' : ''}>
+      <div class="tr"><span class="ic folder">${FOLDER_SVG}</span><span class="r">${it.locked ? '<span class="lockchip">🔒 Locked</span>' : ''}<input type="checkbox" class="sel" data-sel="${i}" ${on ? 'checked' : ''} aria-label="Select ${escH(it.name)}"></span></div>
+      <div><div class="t" title="${escH(it.name)}">${escH(it.name)}</div><div class="s">${escH(meta)}</div></div>
+      <button class="more" data-more="${i}" aria-label="More actions">⋯</button></div>`;
+  };
+  const sel = selected.size ? ' selecting' : '';
+  if (cfg.view === 'list') {
+    el.innerHTML = `<div class="list${sel}">` + view.map(rowOf).join('') + '</div>';
+  } else {
+    const fi = [], fl = [];
+    view.forEach((it, i) => (it.kind === 'folder' ? fi : fl).push([it, i]));
+    el.innerHTML =
+      (fi.length ? `<div class="section-h"><h2>Folders</h2><span>${fi.length} folder${fi.length > 1 ? 's' : ''}</span></div><div class="fgrid${sel}">${fi.map(([it, i]) => cardOf(it, i)).join('')}</div>` : '') +
+      (fl.length ? `<div class="section-h"><h2>Files</h2><span>${fl.length} file${fl.length > 1 ? 's' : ''}</span></div><div class="list${sel}">${fl.map(([it, i]) => rowOf(it, i)).join('')}</div>` : '');
+  }
   renderSelbar();
 }
 
@@ -704,7 +928,7 @@ $('#list').addEventListener('dragstart', e => {
   const ghost = document.createElement('div');
   ghost.textContent = lbl; ghost.style.cssText = 'position:absolute;top:-999px;padding:6px 12px;border-radius:8px;background:#4f46e5;color:#fff;font:600 13px system-ui';
   document.body.appendChild(ghost); e.dataTransfer.setDragImage(ghost, 10, 10); setTimeout(() => ghost.remove());
-  requestAnimationFrame(() => document.querySelectorAll('.row').forEach(r => { if (dragItems.includes(view[+r.dataset.i])) r.classList.add('dragging'); }));
+  requestAnimationFrame(() => document.querySelectorAll('#list [data-i]').forEach(r => { if (dragItems.includes(view[+r.dataset.i])) r.classList.add('dragging'); }));
 });
 $('#list').addEventListener('dragend', () => { dragItems = null; document.querySelectorAll('.dragging,.drop-on').forEach(x => x.classList.remove('dragging', 'drop-on')); });
 function dropTarget(e) {
@@ -729,25 +953,31 @@ document.addEventListener('drop', e => {
   e.preventDefault(); moveItems(its, t.names);
 });
 
+const ACC_COLORS = ['#4f46e5', '#0e9f8e', '#e8890c', '#c2417c', '#3e63dd', '#8e4ec6', '#18794e', '#d93f3f'];
+const accColor = a => ACC_COLORS[accounts.indexOf(a) % ACC_COLORS.length];
 function renderSpace() {
   const all = accounts;
   const unlimited = all.some(a => !a.limit);
   const total = all.reduce((s, a) => s + (a.limit || 0), 0);
   const used = all.reduce((s, a) => s + (a.usage || 0), 0);
   const free = unlimited ? Infinity : Math.max(0, total - used);
-  $('#freeTxt').textContent = all.length ? fmt(free) : '—';
-  $('#totalTxt').textContent = all.length ? `${fmt(used)} used of ${unlimited ? 'unlimited' : fmt(total)} · ${all.length} account${all.length > 1 ? 's' : ''}` : 'No accounts yet';
-  const pct = total ? Math.min(100, used / total * 100) : 0;
-  const bar = $('#totalBar'); bar.firstElementChild.style.width = pct + '%';
-  bar.className = 'bar' + (pct > 90 ? ' red' : pct > 75 ? ' amber' : '');
+  const freeT = all.length ? fmt(free) : '—';
+  const sub = all.length ? `${fmt(used)} used of ${unlimited ? 'unlimited' : fmt(total)} · ${all.length} account${all.length > 1 ? 's' : ''}` : 'No accounts yet';
+  $('#freeTxt').textContent = freeT; $('#mFree').textContent = freeT;
+  $('#totalTxt').textContent = sub; $('#mTotal').textContent = sub;
+  const segs = total ? all.map(a => `<i style="width:${Math.min(100, (a.usage || 0) / total * 100)}%;background:${accColor(a)}" title="${escH(a.email)}: ${fmt(a.usage)} used"></i>`).join('') : '';
+  $('#totalBar').innerHTML = segs; $('#mBar').innerHTML = segs;
+  $('#accList').innerHTML = all.map(a => `<div class="acc-row"><span class="dot" style="background:${accColor(a)}"></span><span title="${escH(a.email)}">${escH(a.email.split('@')[0])}${isLive(a) ? '' : ' ⚠'}</span><span class="f">${fmt(freeOf(a))}</span></div>`).join('');
 }
 
 // No banner: a red dot on Accounts + the reconnect box pops up by itself when sign-ins expire.
 function updateBanner() {
   $('#banner').classList.add('hidden');
   const dead = cfg.clientId ? accounts.filter(a => !isLive(a)) : [];
-  $('#btnAccounts').classList.toggle('alert', dead.length > 0);
-  $('#btnAccounts').title = dead.length ? `${dead.length} account${dead.length > 1 ? 's need' : ' needs'} reconnecting` : '';
+  document.querySelectorAll('.acc-btn').forEach(b => {
+    b.classList.toggle('alert', dead.length > 0);
+    b.title = dead.length ? `${dead.length} account${dead.length > 1 ? 's need' : ' needs'} reconnecting` : '';
+  });
   if (!dead.length) { if ($('#modal').dataset.view === 'reconnect') closeModal(); return; }
   const m = $('#modal');
   if (m.dataset.view === 'reconnect') return showReconnectBox();          // keep the list up to date
@@ -833,6 +1063,201 @@ function showInfo(it) {
     <div class="right">${it.webViewLink ? `<a href="${escH(driveLink(it))}" target="_blank" rel="noopener"><button>Open in Google Drive</button></a>` : ''}<button class="primary" data-close>Close</button></div>`, 'info');
 }
 
+
+/* ---------------- Analysis: large, duplicate, old files, empty folders ----------------
+   One scan lists every file you own in every account, then everything is worked out here. */
+let scan = null, scanning = false, scanCount = 0, anaTab = 'large';
+const anaSel = new Set();
+const LARGE_MIN = 25 * 1024 * 1024;              // "large" = 25 MB or more
+const OLD_MS = 2 * 365 * 24 * 3600 * 1000;       // "old" = not changed in 2 years
+const TYPE_DEFS = [
+  ['PDFs', '#d93f3f'], ['Images', '#2f8f57'], ['Spreadsheets', '#18794e'], ['Documents', '#3e63dd'],
+  ['Videos', '#8e4ec6'], ['Audio', '#d6409f'], ['Archives', '#6f6e77'], ['Other', '#a1a1aa']];
+function typeGroup(f) {
+  const t = typeOf(f)[0];
+  return { pdf: 'PDFs', image: 'Images', sheet: 'Spreadsheets', doc: 'Documents', slides: 'Documents', text: 'Documents',
+           video: 'Videos', audio: 'Audio', zip: 'Archives' }[t] || 'Other';
+}
+
+async function runScan() {
+  if (scanning) return;
+  scanning = true; scanCount = 0; anaSel.clear(); renderAnalysis();
+  const all = [];
+  try {
+    await Promise.all(live().map(async a => {
+      let tok;
+      do {
+        const p = { q: "trashed=false and 'me' in owners", pageSize: 1000,
+          fields: 'nextPageToken,files(id,name,mimeType,size,modifiedTime,parents,md5Checksum,appProperties,webViewLink)' };
+        if (tok) p.pageToken = tok;
+        const r = await api(a, 'files?' + qs(p));
+        r.files.forEach(f => all.push({ ...f, email: a.email }));
+        scanCount = all.length; tok = r.nextPageToken;
+        if (mode === 'analysis') renderAnalysis();
+      } while (tok);
+    }));
+  } catch (e) { scanning = false; handleErr(e); renderAnalysis(); return; }
+
+  // folders → paths and lock status
+  const folders = new Map(), hasChild = new Set();
+  all.forEach(f => {
+    if (f.mimeType === FOLDER) folders.set(f.email + '/' + f.id, f);
+    (f.parents || []).forEach(p => hasChild.add(f.email + '/' + p));
+  });
+  const pathMemo = new Map();
+  const chain = (email, id) => {                       // [{name, locked}] from top to this folder
+    const k = email + '/' + id;
+    if (pathMemo.has(k)) return pathMemo.get(k);
+    const f = folders.get(k); let out = [];
+    if (f) out = [...((f.parents || [])[0] ? chain(email, f.parents[0]) : []), { name: f.name, locked: isLockedF(f) }];
+    pathMemo.set(k, out); return out;
+  };
+  const enrich = f => {
+    const c = (f.parents || [])[0] ? chain(f.email, f.parents[0]) : [];
+    const lockedUp = [...c].reverse().find(x => x.locked);
+    return { ...f, kind: f.mimeType === FOLDER ? 'folder' : 'file', path: c.map(x => x.name).join(' › ') || 'All files',
+             lockedAboveName: lockedUp ? lockedUp.name : '' };
+  };
+
+  const files = all.filter(f => f.mimeType !== FOLDER && f.size).map(enrich);
+  const now = Date.now();
+  const types = new Map(TYPE_DEFS.map(([n]) => [n, 0]));
+  files.forEach(f => types.set(typeGroup(f), types.get(typeGroup(f)) + (+f.size)));
+  const usedBytes = files.reduce((s, f) => s + (+f.size), 0);
+
+  const groups = new Map();
+  files.forEach(f => {
+    const k = f.md5Checksum ? 'm' + f.md5Checksum + f.size : 'n' + f.name + '|' + f.size;
+    if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f);
+  });
+  const dups = [...groups.values()].filter(g => g.length > 1)
+    .map(g => g.sort((a, b) => (b.modifiedTime || '').localeCompare(a.modifiedTime || '')))
+    .map(g => ({ name: g[0].name, size: +g[0].size, items: g, wasted: (+g[0].size) * (g.length - 1) }))
+    .sort((a, b) => b.wasted - a.wasted);
+
+  const empty = all.filter(f => f.mimeType === FOLDER && !hasChild.has(f.email + '/' + f.id))
+    .map(f => { const e = enrich(f); return { ...e, refs: [{ email: f.email, id: f.id }], locked: isLockedF(f) }; });
+
+  scan = {
+    when: new Date(), total: all.length, usedBytes,
+    types: TYPE_DEFS.map(([n, c]) => ({ name: n, color: c, bytes: types.get(n) })).filter(t => t.bytes > 0),
+    large: files.slice().sort((a, b) => b.size - a.size).slice(0, 100),
+    largeCount: files.filter(f => +f.size >= LARGE_MIN).length,
+    dups: dups.slice(0, 150), dupCount: dups.length, dupWaste: dups.reduce((s, g) => s + g.wasted, 0),
+    old: files.filter(f => f.modifiedTime && now - Date.parse(f.modifiedTime) > OLD_MS)
+      .sort((a, b) => (a.modifiedTime || '').localeCompare(b.modifiedTime || '')),
+    empty
+  };
+  scanning = false;
+  if (mode === 'analysis') renderAnalysis();
+}
+
+function anaList() {
+  if (!scan) return [];
+  return anaTab === 'large' ? scan.large : anaTab === 'old' ? scan.old.slice(0, 300) : anaTab === 'empty' ? scan.empty.slice(0, 300) : [];
+}
+
+function renderAnalysis() {
+  const el = $('#list');
+  if (!live().length) { el.innerHTML = '<div class="list empty"><h3>No connected accounts</h3><p>Reconnect your accounts to analyse them.</p></div>'; return; }
+  if (!scan && !scanning) { runScan(); return; }
+  if (scanning && !scan) {
+    el.innerHTML = `<div class="card progress"><div class="spinner" style="margin:0 auto 14px"></div>Scanning ${live().length} account${live().length > 1 ? 's' : ''}… <b>${scanCount.toLocaleString()}</b> items found</div>`;
+    return;
+  }
+  const S = scan;
+  const tabs = [
+    ['large', 'Large files', S.largeCount.toLocaleString(), 'Over 25 MB each'],
+    ['dup', 'Duplicates', S.dupCount.toLocaleString() + ' group' + (S.dupCount === 1 ? '' : 's'), fmt(S.dupWaste) + ' wasted'],
+    ['old', 'Old files', S.old.length.toLocaleString(), 'Not changed in 2+ years'],
+    ['empty', 'Empty folders', S.empty.length.toLocaleString(), 'Nothing inside']];
+  const panels = {
+    large: ['Largest files', 'Biggest first (top 100). Tick the ones you no longer need.', 'Trash selected'],
+    dup: ['Duplicates', 'Same file in more than one place, in any account. The newest copy is kept.', 'Keep newest of all'],
+    old: ['Old files', 'Oldest first. Review before deleting.', 'Trash selected'],
+    empty: ['Empty folders', 'Folders with nothing inside.', 'Remove selected'] };
+  const [pt, ph, pa] = panels[anaTab];
+  const list = anaList();
+  const selCount = anaSel.size;
+  const maxSize = Math.max(1, ...(anaTab === 'large' ? list.map(f => +f.size) : [1]));
+  const lockTag = f => f.lockedAboveName ? ` <span class="lock" title="Inside locked folder ${escH(f.lockedAboveName)}">🔒</span>` : '';
+  const fileRow = (f, i, right) => {
+    const [, label, color] = typeOf(f);
+    const icon = f.kind === 'folder' ? `<span class="ic folder" style="width:34px;height:34px">${FOLDER_SVG.replace('34', '30').replace('34', '30')}</span>` : `<span class="ic" style="--c:${color}">${label}</span>`;
+    return `<div class="arow"><input type="checkbox" data-asel="${i}" ${anaSel.has(i) ? 'checked' : ''} aria-label="Select ${escH(f.name)}">
+      <span class="nmx">${icon}<a data-aopen="${i}" title="${escH(f.name)}">${escH(f.name)}</a>${lockTag(f)}</span>
+      <span class="path" title="${escH(f.path)}">${escH(f.path)}</span>${right}</div>`;
+  };
+  let body = '';
+  if (anaTab === 'dup') {
+    body = S.dups.length ? S.dups.map((g, gi) => {
+      const [, label, color] = typeOf(g.items[0]);
+      return `<div class="dgroup"><div class="h"><span class="ic" style="--c:${color}">${label}</span><span class="n" title="${escH(g.name)}">${escH(g.name)}</span>
+        <span class="m">${g.items.length} copies · ${fmt(g.size)} each</span>
+        <button data-adup="${gi}">Keep newest, trash others</button></div>
+        <div class="places">${g.items.map((f, k) => `<span>${k === 0 ? '<b>Keep ·</b> ' : ''}${escH(f.path)} · ${escH(f.email.split('@')[0])} · ${fmtDate(f.modifiedTime)}${lockTag(f)}</span>`).join('')}</div></div>`;
+    }).join('') : '<div class="empty"><h3>No duplicates found 🎉</h3></div>';
+  } else if (!list.length) {
+    body = `<div class="empty"><h3>Nothing here 🎉</h3></div>`;
+  } else {
+    body = list.map((f, i) => fileRow(f, i,
+      anaTab === 'large' ? `<span class="sizebar"><b>${fmt(+f.size)}</b><i><i style="width:${Math.max(2, f.size / maxSize * 100)}%;height:4px"></i></i></span>`
+      : anaTab === 'old' ? `<span class="path">${fmtDate(f.modifiedTime)} · ${fmt(+f.size)}</span>`
+      : `<span class="path">${fmtDate(f.modifiedTime)}</span>`)).join('');
+  }
+  const actionDisabled = anaTab !== 'dup' && !selCount;
+  el.innerHTML = `
+    <div class="ana-head"><div style="flex:1 1 320px"><h1>Analysis</h1>
+      <p>${S.total.toLocaleString()} items across ${live().length} account${live().length > 1 ? 's' : ''}. Scanned at ${S.when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.${scanning ? ' Rescanning…' : ''}</p></div>
+      <button data-ascan ${scanning ? 'disabled' : ''}>↻ Scan again</button></div>
+    <section class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0;font-size:15px">Space by file type</h2><span style="font-size:13px;color:var(--muted)">${fmt(S.usedBytes)} in files</span></div>
+      <div class="typebar">${S.types.map(t => `<i style="width:${t.bytes / Math.max(1, S.usedBytes) * 100}%;background:${t.color}" title="${t.name}: ${fmt(t.bytes)}"></i>`).join('')}</div>
+      <div class="legend">${S.types.map(t => `<span><i style="background:${t.color}"></i>${t.name} <b>${fmt(t.bytes)}</b></span>`).join('')}</div>
+    </section>
+    <div class="atabs" role="tablist">${tabs.map(([id, l, c, h]) => `<button role="tab" aria-selected="${anaTab === id}" class="atab${anaTab === id ? ' on' : ''}" data-atab="${id}"><span>${l}</span><b>${c}</b><small>${h}</small></button>`).join('')}</div>
+    <section class="card" style="overflow:hidden">
+      <div class="apanel-h"><div><h2>${pt}</h2><p>${ph}</p></div>
+        <span style="display:flex;gap:8px;align-items:center">${anaTab !== 'dup' && list.length ? `<button data-aall>${selCount === list.length ? 'Clear' : 'Select all'}</button>` : ''}
+        <button class="btn-danger" data-aact ${actionDisabled || (anaTab === 'dup' && !S.dups.length) ? 'disabled' : ''}>${pa}${selCount && anaTab !== 'dup' ? ` (${selCount})` : ''}</button></span></div>
+      ${body}
+    </section>
+    <p class="ana-note">Everything goes to Google Drive's Trash, so you can restore it for 30 days. Locked folders can't be removed, and items inside them ask first.</p>`;
+}
+
+function purgeFromScan(its) {
+  if (!scan) return;
+  const gone = new Set(its.map(f => f.email + '/' + f.id));
+  const keep = f => !gone.has(f.email + '/' + f.id);
+  scan.large = scan.large.filter(keep); scan.old = scan.old.filter(keep); scan.empty = scan.empty.filter(keep);
+  scan.dups = scan.dups.map(g => ({ ...g, items: g.items.filter(keep) })).filter(g => g.items.length > 1)
+    .map(g => ({ ...g, wasted: g.size * (g.items.length - 1) }));
+  scan.dupCount = scan.dups.length; scan.dupWaste = scan.dups.reduce((s, g) => s + g.wasted, 0);
+  scan.largeCount = scan.large.filter(f => +f.size >= LARGE_MIN).length;
+  anaSel.clear();
+}
+async function anaTrash(its) {
+  if (!its.length) return;
+  const ok = await deleteItems(its);
+  if (ok) { purgeFromScan(its); renderAnalysis(); }
+}
+
+$('#list').addEventListener('click', e => {
+  if (mode !== 'analysis' || searchQ) return;
+  const t = e.target;
+  const tab = t.closest('[data-atab]'); if (tab) { anaTab = tab.dataset.atab; anaSel.clear(); return renderAnalysis(); }
+  if (t.closest('[data-ascan]')) return runScan();
+  const sel = t.closest('[data-asel]');
+  if (sel) { const i = +sel.dataset.asel; anaSel.has(i) ? anaSel.delete(i) : anaSel.add(i); return renderAnalysis(); }
+  if (t.closest('[data-aall]')) { const l = anaList(); if (anaSel.size === l.length) anaSel.clear(); else l.forEach((_, i) => anaSel.add(i)); return renderAnalysis(); }
+  const op = t.closest('[data-aopen]'); if (op) { const f = anaList()[+op.dataset.aopen]; if (f) openFile(f); return; }
+  const dg = t.closest('[data-adup]'); if (dg) { const g = scan.dups[+dg.dataset.adup]; if (g) anaTrash(g.items.slice(1)); return; }
+  if (t.closest('[data-aact]')) {
+    if (anaTab === 'dup') return anaTrash(scan.dups.flatMap(g => g.items.slice(1)));
+    const l = anaList(); return anaTrash([...anaSel].map(i => l[i]).filter(Boolean));
+  }
+});
+
 /* ---------------- Item actions ---------------- */
 const driveLink = f => f.webViewLink ? f.webViewLink + (f.webViewLink.includes('?') ? '&' : '?') + 'authuser=' + encodeURIComponent(f.email) : '#';
 
@@ -900,7 +1325,10 @@ async function protectReason(its) {
 }
 // Name of the locked folder these items sit inside (deleting them needs an extra confirmation), or ''.
 async function insideLocked(its) {
-  if (!searchQ) return stack.find(s => s.locked)?.name || '';
+  const pre = its.find(it => it.lockedAboveName);
+  if (pre) return pre.lockedAboveName;
+  if (its.every(it => 'lockedAboveName' in it)) return '';
+  if (mode === 'files' && !searchQ) return stack.find(s => s.locked)?.name || '';
   for (const it of its) { try { const n = await lockedAncestor(it); if (n) return n; } catch {} }
   return '';
 }
@@ -941,6 +1369,7 @@ async function deleteItems(its) {
     const targets = its.flatMap(it => it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }]);
     await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
     selected.clear(); fcache.clear(); toast('Moved to trash (it still uses space until the trash is emptied)'); reload();
+    return true;
   } catch (e) { handleErr(e); }
 }
 const deleteItem = it => deleteItems([it]);
@@ -983,7 +1412,7 @@ function uploadMenu(anchor) {
   m.classList.remove('hidden');
   const r = anchor.getBoundingClientRect();
   m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + 'px';
-  m.style.top = (r.bottom + 4) + 'px';
+  m.style.top = (r.bottom + m.offsetHeight + 8 > innerHeight ? Math.max(8, r.top - m.offsetHeight - 6) : r.bottom + 4) + 'px';
   m.onclick = e => {
     const u = e.target.closest('[data-u]')?.dataset.u; if (!u) return;
     closeMenu(); (u === 'files' ? $('#fileInput') : $('#folderInput')).click();
@@ -1107,7 +1536,7 @@ async function startUpload(entries) {
   entries = entries.filter(e => e.file);
   if (!entries.length) return;
   if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
-  if (searchQ) { clearSearch(); reload(); }
+  if (searchQ || mode !== 'files') { clearSearch(); mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); reload(); }
 
   if (entries.length > 20) toast('Checking for files that already exist…');
   const conflicts = await findConflicts(entries);
@@ -1307,14 +1736,26 @@ $('#crumbs').addEventListener('click', e => {
 let searchTimer;
 $('#search').addEventListener('input', e => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { searchQ = e.target.value.trim(); reload(); }, 350);
+  searchTimer = setTimeout(() => {
+    searchQ = e.target.value.trim();
+    if (searchQ && mode === 'analysis') { mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); }
+    reload();
+  }, 350);
 });
 $('#sort').value = cfg.sort;
 $('#sort').onchange = e => { cfg.sort = e.target.value; saveCfg(); renderList(); };
 $('#btnUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
+$('#fabUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
+$('#mNewFolder').onclick = newFolder;
+$('#mAccounts').onclick = showAccounts;
+document.querySelectorAll('[data-nav]').forEach(b => b.onclick = e => { e.stopPropagation(); setMode(b.dataset.nav); });
+if (!cfg.view) cfg.view = 'grid';
+const syncView = () => { $('#vGrid').classList.toggle('on', cfg.view === 'grid'); $('#vList').classList.toggle('on', cfg.view === 'list'); };
+syncView();
+$('#vGrid').onclick = () => { cfg.view = 'grid'; saveCfg(); syncView(); renderList(); };
+$('#vList').onclick = () => { cfg.view = 'list'; saveCfg(); syncView(); renderList(); };
 $('#btnNewFolder').onclick = newFolder;
 $('#btnAccounts').onclick = showAccounts;
-$('#space').onclick = showAccounts;
 $('#modal').addEventListener('click', e => {
   if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal();
   const rem = e.target.closest('[data-remove]'); if (rem) removeAccount(accounts[+rem.dataset.remove]);
@@ -1337,7 +1778,7 @@ function toast(msg, err) {
 }
 
 /* ---------------- Start ---------------- */
-const setHH = () => document.documentElement.style.setProperty('--hh', $('.top').offsetHeight + 'px');
+const setHH = () => document.documentElement.style.setProperty('--hh', ($('.mobile-top').offsetHeight || 0) + 'px');
 setHH(); addEventListener('resize', setHH);
 renderSpace(); updateBanner(); reload();
 if (!cfg.clientId) showSetup();
