@@ -39,16 +39,19 @@ button:disabled{opacity:.5;cursor:default}
 
 main{max-width:1100px;margin:0 auto;padding:16px 20px 120px}
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
-.crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:2px;font-size:17px;font-weight:600;min-width:0;flex:1}
-.crumbs a{padding:4px 8px;border-radius:8px;cursor:pointer;color:var(--muted);text-decoration:none}
+.crumbs{display:flex;align-items:center;flex-wrap:nowrap;gap:2px;font-size:17px;font-weight:600;min-width:0;flex:1 1 100%;overflow:hidden;min-height:36px}
+.crumbs a{flex:0 0 auto;max-width:200px;padding:4px 8px;border-radius:8px;cursor:pointer;color:var(--muted);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crumbs a:hover{background:var(--hover);color:var(--text)}
-.crumbs a:last-child{color:var(--text)}
-.crumbs .sep{color:var(--muted)}
+.crumbs a.cur{flex:0 1 auto;min-width:40px;max-width:none;color:var(--text);cursor:default}
+.crumbs a.cur:hover{background:transparent}
+.crumbs .sep{flex:none;color:var(--muted)}
+.crumbs .up{flex:none;width:34px;height:34px;padding:0;margin-right:6px;border-radius:50%;font-size:18px;line-height:1;display:grid;place-items:center}
+.crumbs a.dots{letter-spacing:1px}
 .search{position:relative;flex:1 1 260px;max-width:380px}
 .search input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none}
 .search input:focus{border-color:var(--accent)}
 .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
-.actions{display:flex;gap:8px;align-items:center}
+.actions{display:flex;gap:8px;align-items:center;margin-left:auto}
 .actions select{padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 
 /* list */
@@ -152,7 +155,8 @@ code,.code{background:var(--accent-soft);color:var(--accent);padding:1px 6px;bor
   #btnAccounts{margin-left:auto}
   main{padding:12px 12px 120px}
   .search{max-width:none;flex-basis:100%;order:2}
-  .crumbs{flex-basis:100%;order:1;font-size:16px}
+  .crumbs{order:1;font-size:16px}
+  .crumbs a{max-width:120px}
   .actions{order:3;width:100%}
   .actions select{flex:1}
   .hide-sm{display:none}
@@ -493,8 +497,24 @@ const FOLDER_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="curren
 
 function renderCrumbs() {
   const c = $('#crumbs');
-  if (searchQ) { c.innerHTML = `<a data-c="clear">All files</a><span class="sep">›</span><a>Search: “${escH(searchQ)}”</a>`; return; }
-  c.innerHTML = stack.map((s, i) => `<a data-c="${i}">${escH(s.name)}</a>`).join('<span class="sep">›</span>');
+  if (searchQ) { c.innerHTML = `<button class="up" data-c="clear" title="Back to folders">←</button><a data-c="clear">All files</a><span class="sep">›</span><a class="cur">Search: “${escH(searchQ)}”</a>`; return; }
+  const last = stack.length - 1;
+  // long paths: All files › … › parent › current
+  const idx = stack.length > 3 ? [0, 'more', last - 1, last] : stack.map((_, i) => i);
+  const up = last > 0 ? `<button class="up" data-c="${last - 1}" title="Up to ${escH(stack[last - 1].name)}">←</button>` : '';
+  c.innerHTML = up + idx.map(i => i === 'more'
+    ? `<a class="dots" data-cm="1" title="${escH(stack.slice(1, last - 1).map(s => s.name).join(' › '))}">…</a>`
+    : `<a ${i === last ? 'class="cur"' : `data-c="${i}"`} title="${escH(stack[i].name)}">${escH(stack[i].name)}</a>`
+  ).join('<span class="sep">›</span>');
+}
+function crumbMenu(anchor) {
+  const m = $('#menu'), last = stack.length - 1;
+  m.innerHTML = stack.slice(1, last - 1).map((s, k) => `<button data-c="${k + 1}" style="padding-left:${12 + k * 12}px">📁 ${escH(s.name)}</button>`).join('');
+  m.classList.remove('hidden');
+  const r = anchor.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = (r.bottom + 4) + 'px';
+  m.onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; closeMenu(); stack = stack.slice(0, +b.dataset.c + 1); reload(); };
 }
 
 function sortedItems() {
@@ -1110,6 +1130,8 @@ $('#list').addEventListener('contextmenu', e => {
   e.preventDefault(); openMenu(view[+row.dataset.i], row.querySelector('.more'));
 });
 $('#crumbs').addEventListener('click', e => {
+  const more = e.target.closest('[data-cm]');
+  if (more) { e.stopPropagation(); return crumbMenu(more); }
   const c = e.target.closest('[data-c]')?.dataset.c; if (c == null) return;
   if (c === 'clear') { clearSearch(); return reload(); }
   stack = stack.slice(0, +c + 1); reload();
