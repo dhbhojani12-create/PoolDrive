@@ -407,12 +407,12 @@ const isTouch = matchMedia('(pointer:coarse)').matches;
 class AuthErr extends Error { constructor(a) { super('Sign-in expired for ' + (a?.email || 'an account')); this.acc = a; } }
 
 /* ---------------- Google API ---------------- */
-async function api(a, path, opts = {}) {
-  if (!isLive(a)) throw new AuthErr(a);
+async function api(a, path, opts = {}, retry = true) {
+  if (!isLive(a) && !(await silentRefresh(a))) throw new AuthErr(a);
   const r = await fetch(path.startsWith('http') ? path : API + path, {
     ...opts, headers: { Authorization: 'Bearer ' + a.token, ...(opts.headers || {}) }
   });
-  if (r.status === 401) { a.exp = 0; saveAcc(); updateBanner(); throw new AuthErr(a); }
+  if (r.status === 401) { a.exp = 0; saveAcc(); if (retry && await silentRefresh(a)) return api(a, path, opts, false); updateBanner(); throw new AuthErr(a); }
   if (!r.ok) {
     let m = 'Error ' + r.status;
     try { const j = await r.json(); m = j.error?.message || m; } catch {}
@@ -453,6 +453,62 @@ async function getToken(hint, prompt) {
   });
 }
 
+/* ---------------- Stay signed in ----------------
+   Your own Google Apps Script (cfg.authUrl) keeps the client secret. Sign-in then gives a long-term
+   key (a.rt) and fresh 1-hour sign-ins are fetched silently, here and in PDF Pair (same site). */
+const AUTH_CODE = "/**\n * PoolDrive \"Stay signed in\" helper.\n * Runs in YOUR Google account (script.google.com). It keeps the OAuth client secret here,\n * so the secret is never in GitHub or on your devices. PoolDrive and PDF Pair send it a\n * one-time sign-in code (first time) or a long-term key (later) and get a fresh sign-in back.\n *\n * Setup: Project Settings \u2192 Script properties \u2192 add\n *   CLIENT_ID     = your PoolDrive Client ID (\u2026apps.googleusercontent.com)\n *   CLIENT_SECRET = that client's secret (Google Cloud \u2192 Google Auth Platform \u2192 Clients \u2192 PoolDrive)\n * Then Deploy \u2192 New deployment \u2192 Web app \u2192 Execute as: Me \u00b7 Who has access: Anyone \u2192 Deploy,\n * and paste the Web app URL into PoolDrive \u2192 Accounts \u2192 Stay signed in.\n */\nfunction doPost(e) {\n  var p = {};\n  try { p = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return out({ error: 'bad_request' }); }\n  var props = PropertiesService.getScriptProperties();\n  var id = props.getProperty('CLIENT_ID'), secret = props.getProperty('CLIENT_SECRET');\n  if (!id || !secret) return out({ error: 'not_set_up', error_description: 'Add CLIENT_ID and CLIENT_SECRET in Project Settings \u2192 Script properties.' });\n  var payload = { client_id: id, client_secret: secret };\n  if (p.op === 'code' && p.code) { payload.code = p.code; payload.grant_type = 'authorization_code'; payload.redirect_uri = 'postmessage'; }\n  else if (p.op === 'refresh' && p.refresh_token) { payload.refresh_token = p.refresh_token; payload.grant_type = 'refresh_token'; }\n  else return out({ error: 'bad_request' });\n  var r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'post', payload: payload, muteHttpExceptions: true });\n  var j = {};\n  try { j = JSON.parse(r.getContentText()); } catch (err) { j = { error: 'google_error' }; }\n  // only pass back what the apps need\n  return out(j.error ? { error: j.error, error_description: j.error_description || '' }\n    : { access_token: j.access_token, expires_in: j.expires_in, refresh_token: j.refresh_token || null, scope: j.scope || '' });\n}\nfunction doGet() { return out({ ok: true, app: 'PoolDrive stay signed in', ready: !!PropertiesService.getScriptProperties().getProperty('CLIENT_SECRET') }); }\nfunction out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }\n";
+const authOn = () => !!cfg.authUrl;
+async function authCall(body) {
+  const r = await fetch(cfg.authUrl, { method: 'POST', body: JSON.stringify(body) });
+  let j; try { j = await r.json(); } catch { throw new Error('The "stay signed in" helper did not answer. Check its URL.'); }
+  if (j.error) throw new Error(j.error_description || j.error);
+  return j;
+}
+async function getCode(hint) {
+  await gisReady();
+  return new Promise((res, rej) => {
+    google.accounts.oauth2.initCodeClient({
+      client_id: cfg.clientId, scope: SCOPE, ux_mode: 'popup', hint, login_hint: hint, select_account: !hint,
+      callback: r => {
+        if (r.error) return rej(new Error(r.error_description || r.error));
+        if (!google.accounts.oauth2.hasGrantedAllScopes(r, SCOPE)) return rej(new Error('Please tick the "See, edit, create and delete your Google Drive files" box'));
+        res(r.code);
+      },
+      error_callback: e => rej(new Error(e.type === 'popup_closed' ? 'Sign-in window was closed' : e.type === 'popup_failed_to_open' ? 'Pop-up blocked. Allow pop-ups for this site.' : (e.message || e.type)))
+    }).requestCode();
+  });
+}
+// one sign-in: with the helper → also a long-term key; without → the 1-hour sign-in as before
+async function signIn(hint, prompt) {
+  if (!authOn()) return getToken(hint, prompt);
+  return authCall({ op: 'code', code: await getCode(hint) });
+}
+const refreshing = new Map();
+function silentRefresh(a) {
+  if (!authOn() || !a || !a.rt) return Promise.resolve(false);
+  if (refreshing.has(a.email)) return refreshing.get(a.email);
+  const p = (async () => {
+    try {
+      const j = await authCall({ op: 'refresh', refresh_token: a.rt });
+      a.token = j.access_token; a.exp = Date.now() + j.expires_in * 1000; if (j.refresh_token) a.rt = j.refresh_token;
+      saveAcc(); return true;
+    } catch (e) { if (/invalid_grant/i.test(e.message)) { a.rt = null; saveAcc(); } return false; }
+    finally { refreshing.delete(a.email); }
+  })();
+  refreshing.set(a.email, p); return p;
+}
+async function refreshAll() {
+  const due = accounts.filter(a => a.rt && a.exp < Date.now() + 5 * 60e3);
+  if (!due.length) return false;
+  return (await Promise.all(due.map(silentRefresh))).some(Boolean);
+}
+// PDF Pair (same site) may refresh too: take its newer sign-ins
+addEventListener('storage', e => {
+  if (e.key !== LS.acc) return;
+  for (const f of load(LS.acc, [])) { const a = accBy(f.email); if (a && f.exp > a.exp) { a.token = f.token; a.exp = f.exp; if (f.rt) a.rt = f.rt; } }
+  renderSpace(); updateBanner();
+});
+
 async function refreshAbout(a) {
   const r = await api(a, 'about?fields=' + encodeURIComponent('user(displayName,emailAddress,photoLink),storageQuota(limit,usage)'));
   a.email = r.user.emailAddress; a.name = r.user.displayName; a.photo = r.user.photoLink || '';
@@ -463,10 +519,12 @@ async function refreshAbout(a) {
 
 async function addAccount() {
   try {
-    const r = await getToken(undefined, 'select_account consent');
+    const r = await signIn(undefined, 'select_account consent');
     const t = { token: r.access_token, exp: Date.now() + r.expires_in * 1000 };
+    if (r.refresh_token) t.rt = r.refresh_token;
     await refreshAbout(t);
     const ex = accBy(t.email);
+    if (authOn() && !t.rt && !(ex && ex.rt)) toast('Google gave no long-term key for ' + t.email + '. Remove PoolDrive at myaccount.google.com/permissions (that account), then add it again.', true);
     if (ex) { Object.assign(ex, t); toast('Reconnected ' + t.email); }
     else { accounts.push(t); toast('Added ' + t.email); }
     saveAcc(); accountsChanged();
@@ -475,8 +533,10 @@ async function addAccount() {
 
 async function reconnect(a) {
   try {
-    const r = await getToken(a.email, '');
+    const r = await signIn(a.email, '');
     const t = { token: r.access_token, exp: Date.now() + r.expires_in * 1000 };
+    if (r.refresh_token) t.rt = r.refresh_token;
+    else if (authOn() && !a.rt) toast('Google gave no long-term key for ' + a.email + '. Remove PoolDrive at myaccount.google.com/permissions (that account), then tap "Stay signed in" again.', true);
     await refreshAbout(t);
     if (t.email !== a.email) {
       const other = accBy(t.email);
@@ -1056,12 +1116,13 @@ function showAccounts() {
     const pct = a.limit ? Math.min(100, a.usage / a.limit * 100) : 0;
     const av = a.photo ? `<img src="${escH(a.photo)}" alt="" referrerpolicy="no-referrer">` : `<div class="av">${escH((a.email || '?')[0].toUpperCase())}</div>`;
     return `<div class="acc">${av}<div class="nm">
-        <div class="t">${escH(a.name || a.email)}${isLive(a) ? '' : '<span class="chip bad">needs sign-in</span>'}</div>
+        <div class="t">${escH(a.name || a.email)}${isLive(a) ? '' : '<span class="chip bad">needs sign-in</span>'}${a.rt && authOn() ? '<span class="chip" title="Signs in by itself">auto</span>' : ''}</div>
         <div class="s">${escH(a.email)}</div>
         <div class="bar${pct > 90 ? ' red' : pct > 75 ? ' amber' : ''}"><i style="width:${pct}%"></i></div>
         <div class="s"><b>${fmt(freeOf(a))}</b> free · ${fmt(a.usage)} of ${a.limit ? fmt(a.limit) : 'unlimited'}</div>
       </div><div class="acc-btns">
         ${isLive(a) ? '' : `<button class="primary" data-recon="${escH(a.email)}">Reconnect</button>`}
+        ${authOn() && !a.rt && isLive(a) ? `<button data-recon="${escH(a.email)}" title="Sign in once more to stay signed in">Stay signed in</button>` : ''}
         <button class="danger" data-remove="${i}">Remove</button>
       </div></div>`;
   }).join('');
@@ -1075,13 +1136,48 @@ function showAccounts() {
     </div>
     <h2 style="margin-top:26px;font-size:16px">Settings</h2>
     <label class="check"><input type="checkbox" id="keepTog" ${cfg.keepTogether ? 'checked' : ''}><span>Keep folders together<small>Files uploaded into a folder go to the account that already has that folder, while it has room. A dropped folder goes into one account if it fits.</small></span></label>
+    <div class="card" style="padding:14px 16px;margin-top:14px">
+      <b>Stay signed in</b>
+      <p class="sub" style="margin:4px 0 10px">${authOn() ? (accounts.every(a => a.rt) ? '✓ On. All accounts sign in by themselves, on this device.' : 'On. Tap <b>Stay signed in</b> on each account above once.') : 'Off. Sign-ins last about an hour, then you tap Reconnect. Turn this on once and they renew by themselves.'}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${authOn() ? '<button id="authOff" class="ghost">Turn off</button>' : '<button id="authSetup" class="primary">Set up</button>'}</div>
+    </div>
     <div class="right" style="justify-content:space-between"><button class="ghost" id="editCid">Change Client ID</button><button data-close>Done</button></div>
-    <div class="note">Google keeps you signed in for about an hour at a time. After that, tap <b>Reconnect</b>. It's one tap, since you've already given permission.</div>
   `, 'accounts');
   $('#addAcc').onclick = addAccount;
   $('#editCid').onclick = showSetup;
+  if ($('#authSetup')) $('#authSetup').onclick = showAuthSetup;
+  if ($('#authOff')) $('#authOff').onclick = () => { if (!confirm('Turn off "stay signed in" on this device?')) return; cfg.authUrl = ''; saveCfg(); accounts.forEach(a => delete a.rt); saveAcc(); showAccounts(); };
   $('#keepTog').onchange = e => { cfg.keepTogether = e.target.checked; saveCfg(); };
   $('#refreshQuota').onclick = async () => { await Promise.allSettled(live().map(refreshAbout)); saveAcc(); renderSpace(); showAccounts(); toast('Space updated'); };
+}
+
+function showAuthSetup() {
+  showModal(`
+    <h2>Stay signed in (one-time, about 10 minutes)</h2>
+    <p class="sub">A tiny helper in your own Google account keeps the secret key, so it is never in GitHub or on your phone or laptop.</p>
+    <ol class="steps">
+      <li><b>Get the secret.</b> Open <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Google Auth Platform → Clients</a>, open your <b>web</b> client (the one whose Client ID PoolDrive uses), and copy its <b>Client secret</b> (if none shows, click <b>Add secret</b>).</li>
+      <li>Open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com → New project</a>. Delete what is there and paste the helper code:<br><button id="copyCode" style="margin-top:6px">Copy helper code</button></li>
+      <li>Left side ⚙ <b>Project Settings</b> → <b>Script properties</b> → <b>Add script property</b> twice:<br>
+        <code>CLIENT_ID</code> = <span class="code">${escH(cfg.clientId)}</span><br><code>CLIENT_SECRET</code> = the secret from step 1 → <b>Save</b>.</li>
+      <li><b>Deploy</b> (top right) → <b>New deployment</b> → ⚙ type <b>Web app</b> → Execute as <b>Me</b>, Who has access <b>Anyone</b> → <b>Deploy</b>. Allow the permissions it asks for (Advanced → Go to … if Google warns). Copy the <b>Web app URL</b>.</li>
+      <li>Paste the URL below and press <b>Turn on</b>. Then in Accounts, tap <b>Stay signed in</b> once per account.</li>
+    </ol>
+    <label class="field"><span>Web app URL</span><input type="text" id="authUrlIn" placeholder="https://script.google.com/macros/s/…/exec" value="${escH(cfg.authUrl || '')}"></label>
+    <div class="note">Do this on each device (laptop, phone) once: paste the same URL. "Anyone" only means the helper can be reached; it does nothing without a sign-in code or long-term key that only your devices have.</div>
+    <div class="right"><button data-close>Cancel</button><button class="primary" id="authSave">Turn on</button></div>`, 'auth');
+  $('#copyCode').onclick = async () => { try { await navigator.clipboard.writeText(AUTH_CODE); toast('Helper code copied'); } catch { toast('Copy failed: select the code in auth/Code.gs on GitHub instead', true); } };
+  $('#authSave').onclick = async () => {
+    const u = $('#authUrlIn').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(u)) return toast('That does not look like a Web app URL (script.google.com/macros/…/exec)', true);
+    try {
+      const r = await fetch(u); const j = await r.json();
+      if (!j.ok) throw new Error('not the helper');
+      if (!j.ready) return toast('The helper is reachable but CLIENT_SECRET is missing in its Script properties', true);
+    } catch (e) { return toast('Could not reach the helper. Check the URL and that access is "Anyone".', true); }
+    cfg.authUrl = u; saveCfg(); toast('Stay signed in is on. Now tap "Stay signed in" on each account.');
+    showAccounts();
+  };
 }
 
 function showInfo(it) {
@@ -1631,7 +1727,7 @@ async function runJob(j) {
 }
 
 async function uploadFile(a, file, parentId, onProgress, name, replaceId) {
-  if (!isLive(a)) throw new AuthErr(a);
+  if (!isLive(a) && !(await silentRefresh(a))) throw new AuthErr(a);
   const type = file.type || 'application/octet-stream';
   const meta = replaceId ? {} : { name: name || file.name, parents: [parentId] };
   const url = replaceId ? `${UPLOAD}/${replaceId}` : UPLOAD, method = replaceId ? 'PATCH' : 'POST';
@@ -1809,7 +1905,7 @@ addEventListener('resize', closeMenu);
 addEventListener('scroll', closeMenu, true);
 addEventListener('beforeunload', e => { if (jobs.some(j => j.status === 'uploading' || j.status === 'waiting')) { e.preventDefault(); e.returnValue = ''; } });
 // re-check sign-in state every minute (tokens last ~1 hour)
-setInterval(() => { updateBanner(); if ($('#modal').dataset.view === 'accounts') showAccounts(); }, 60000);
+setInterval(async () => { try { if (await refreshAll()) renderSpace(); } catch {} updateBanner(); if ($('#modal').dataset.view === 'accounts') showAccounts(); }, 60000);
 
 function toast(msg, err) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
@@ -1819,7 +1915,8 @@ function toast(msg, err) {
 /* ---------------- Start ---------------- */
 const setHH = () => document.documentElement.style.setProperty('--hh', ($('.mobile-top').offsetHeight || 0) + 'px');
 setHH(); addEventListener('resize', setHH);
-renderSpace(); updateBanner(); reload();
+renderSpace();
+(async () => { try { await refreshAll(); } catch {} renderSpace(); updateBanner(); reload(); })();
 if (!cfg.clientId) showSetup();
 </script>
 </body>
