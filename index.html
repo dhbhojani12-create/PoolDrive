@@ -822,7 +822,8 @@ async function openFile(f) {
   const [t] = typeOf(f);
   const native = (f.mimeType || '').startsWith('application/vnd.google-apps.');
   if (native || t === 'video' || t === 'audio' || (t === 'pdf' && isTouch)) { window.open(driveLink(f), '_blank', 'noopener'); return; }
-  if (!['image', 'pdf', 'text'].includes(t)) return downloadFile(f);
+  // Word, Excel, PowerPoint, zip and everything else: open in Google Drive's online viewer (Download stays in the ⋯ menu)
+  if (!['image', 'pdf', 'text'].includes(t)) { window.open(driveLink(f), '_blank', 'noopener'); return; }
   showModal(`<div class="sheet-head"><div class="t">${escH(f.name)}</div>
       <button id="pvDl">Download</button><button data-close>✕</button></div>
       <div class="pv" id="pv"><div class="spinner"></div></div>`, 'preview', { wide: true });
