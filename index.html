@@ -334,6 +334,22 @@ async function reconnect(a) {
   } catch (e) { toast(e.message, true); }
 }
 
+// Browsers allow one sign-in pop-up per click, so this walks through the accounts:
+// first tap reconnects account 1, then a "Next" button appears for each remaining one.
+async function reconnectAll() {
+  const dead = accounts.filter(a => !isLive(a));
+  if (!dead.length) { if ($('#modal').dataset.view === 'reconnect') closeModal(); return toast('All accounts are connected'); }
+  await reconnect(dead[0]);
+  const rest = accounts.filter(a => !isLive(a));
+  if (!rest.length) { if ($('#modal').dataset.view === 'reconnect') closeModal(); return toast('All accounts reconnected ✓'); }
+  const total = accounts.length, ok = total - rest.length;
+  showModal(`<h2>Reconnect accounts</h2>
+    <p class="sub">${ok} of ${total} connected. Your browser needs one tap per account. Tap below for the next one.</p>
+    ${rest.map((a, i) => `<div class="info-row"><b>${i === 0 ? 'Next' : 'Then'}</b><span>${escH(a.email)}</span></div>`).join('')}
+    <div class="right"><button data-close>Later</button><button class="primary" id="rcNext">Reconnect ${escH(rest[0].email)}</button></div>`, 'reconnect');
+  $('#rcNext').onclick = reconnectAll;
+}
+
 function removeAccount(a) {
   if (!confirm(`Remove ${a.email} from PoolDrive?\n\nNothing is deleted from Google Drive; its files just stop showing here.`)) return;
   try { if (a.token) google.accounts.oauth2.revoke(a.token, () => {}); } catch {}
@@ -720,6 +736,7 @@ function updateBanner() {
   if (!dead.length || !cfg.clientId) { b.classList.add('hidden'); return; }
   b.classList.remove('hidden');
   b.innerHTML = `<span>⚠ ${dead.length === 1 ? '1 account needs' : dead.length + ' accounts need'} a quick sign-in. Their files are hidden until then:</span>` +
+    (dead.length > 1 ? '<button class="primary" data-reconall>Reconnect all</button>' : '') +
     dead.map(a => `<button data-recon="${escH(a.email)}">Reconnect ${escH(a.email)}</button>`).join('');
 }
 
@@ -780,7 +797,7 @@ function showAccounts() {
     <p class="sub">${accounts.length ? `Combined: <b>${escH($('#freeTxt').textContent)}</b> free. New uploads go to the account with the most free space.` : 'No accounts yet.'}</p>
     ${rows}
     <div class="right" style="justify-content:space-between">
-      <button id="refreshQuota">↻ Refresh space</button>
+      <span style="display:flex;gap:8px"><button id="refreshQuota">↻ Refresh space</button>${accounts.some(a => !isLive(a)) ? '<button data-reconall>Reconnect all</button>' : ''}</span>
       <button class="primary" id="addAcc">+ Add Google account</button>
     </div>
     <h2 style="margin-top:26px;font-size:16px">Settings</h2>
@@ -1248,6 +1265,7 @@ $('#modal').addEventListener('click', e => {
 });
 document.addEventListener('click', e => {
   const rc = e.target.closest('[data-recon]'); if (rc) reconnect(accBy(rc.dataset.recon));
+  if (e.target.closest('[data-reconall]')) reconnectAll();
   if (!e.target.closest('#menu')) closeMenu();
 });
 addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(); if (!$('#modal').classList.contains('hidden')) closeModal(); else if (selected.size) clearSel(); } });
