@@ -967,7 +967,10 @@ function renderSpace() {
   $('#totalTxt').textContent = sub; $('#mTotal').textContent = sub;
   const segs = total ? all.map(a => `<i style="width:${Math.min(100, (a.usage || 0) / total * 100)}%;background:${accColor(a)}" title="${escH(a.email)}: ${fmt(a.usage)} used"></i>`).join('') : '';
   $('#totalBar').innerHTML = segs; $('#mBar').innerHTML = segs;
-  $('#accList').innerHTML = all.map(a => `<div class="acc-row"><span class="dot" style="background:${accColor(a)}"></span><span title="${escH(a.email)}">${escH(a.email.split('@')[0])}${isLive(a) ? '' : ' ⚠'}</span><span class="f">${fmt(freeOf(a))}</span></div>`).join('');
+  const SHOW = 3;     // keep the sidebar card small: the full list is in Accounts
+  const shown = all.length > SHOW + 1 ? all.slice(0, SHOW) : all;
+  $('#accList').innerHTML = shown.map(a => `<div class="acc-row"><span class="dot" style="background:${accColor(a)}"></span><span title="${escH(a.email)}">${escH(a.email.split('@')[0])}${isLive(a) ? '' : ' ⚠'}</span><span class="f">${fmt(freeOf(a))}</span></div>`).join('') +
+    (all.length > shown.length ? `<button class="ghost acc-more" style="padding:2px 0;font-size:12.5px;color:var(--accent);text-align:left">+ ${all.length - shown.length} more account${all.length - shown.length > 1 ? 's' : ''}</button>` : '');
 }
 
 // No banner: a red dot on Accounts + the reconnect box pops up by itself when sign-ins expire.
@@ -1115,7 +1118,7 @@ async function runScan() {
   const enrich = f => {
     const c = (f.parents || [])[0] ? chain(f.email, f.parents[0]) : [];
     const lockedUp = [...c].reverse().find(x => x.locked);
-    return { ...f, kind: f.mimeType === FOLDER ? 'folder' : 'file', path: c.map(x => x.name).join(' › ') || 'All files',
+    return { ...f, kind: f.mimeType === FOLDER ? 'folder' : 'file', pathNames: c.map(x => x.name), path: c.map(x => x.name).join(' › ') || 'All files',
              lockedAboveName: lockedUp ? lockedUp.name : '' };
   };
 
@@ -1250,7 +1253,12 @@ $('#list').addEventListener('click', e => {
   const sel = t.closest('[data-asel]');
   if (sel) { const i = +sel.dataset.asel; anaSel.has(i) ? anaSel.delete(i) : anaSel.add(i); return renderAnalysis(); }
   if (t.closest('[data-aall]')) { const l = anaList(); if (anaSel.size === l.length) anaSel.clear(); else l.forEach((_, i) => anaSel.add(i)); return renderAnalysis(); }
-  const op = t.closest('[data-aopen]'); if (op) { const f = anaList()[+op.dataset.aopen]; if (f) openFile(f); return; }
+  const op = t.closest('[data-aopen]');
+  if (op) {
+    const f = anaList()[+op.dataset.aopen]; if (!f) return;
+    if (f.kind === 'folder') return navigateNames([...(f.pathNames || []), f.name]);   // open the folder here in PoolDrive
+    return openFile(f);
+  }
   const dg = t.closest('[data-adup]'); if (dg) { const g = scan.dups[+dg.dataset.adup]; if (g) anaTrash(g.items.slice(1)); return; }
   if (t.closest('[data-aact]')) {
     if (anaTab === 'dup') return anaTrash(scan.dups.flatMap(g => g.items.slice(1)));
@@ -1748,6 +1756,7 @@ $('#btnUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget
 $('#fabUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
 $('#mNewFolder').onclick = newFolder;
 $('#mAccounts').onclick = showAccounts;
+$('#accList').addEventListener('click', e => { if (e.target.closest('.acc-more')) showAccounts(); });
 document.querySelectorAll('[data-nav]').forEach(b => b.onclick = e => { e.stopPropagation(); setMode(b.dataset.nav); });
 if (!cfg.view) cfg.view = 'grid';
 const syncView = () => { $('#vGrid').classList.toggle('on', cfg.view === 'grid'); $('#vList').classList.toggle('on', cfg.view === 'list'); };
