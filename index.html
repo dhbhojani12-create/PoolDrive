@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PoolDrive</title>
 <meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--bg:#f6f6f8;--card:#fff;--text:#1b1b20;--muted:#6c6c78;--line:#e5e5ea;--hover:#f1f1f5;--accent:#4f46e5;--accent-soft:#eef0ff;--danger:#e5484d;--ok:#30a46c;--warn:#f5a524;--r:14px;--shadow:0 8px 30px rgba(20,20,40,.12)}
@@ -952,19 +955,21 @@ async function moveItems(its, targetNames) {
 }
 
 let pstack = [];
-function showMovePicker(its) {
+function showMovePicker(its, save) {   // save = {title, onPick(names)}: pick a folder to save into instead of moving
   if (!its.length) return;
-  pstack = searchQ ? [{ name: 'All files', refs: null }] : stack.map(s => ({ ...s }));
-  showModal(`<h2>Move ${its.length === 1 ? '“' + escH(its[0].name) + '”' : its.length + ' items'}</h2>
-    <p class="sub" style="margin:0">Pick a folder, then tap <b>Move here</b>.</p>
+  pstack = searchQ || save ? [{ name: 'All files', refs: null }] : stack.map(s => ({ ...s }));
+  const verb = save ? 'Save here' : 'Move here';
+  showModal(`<h2>${save ? escH(save.title) : 'Move ' + (its.length === 1 ? '“' + escH(its[0].name) + '”' : its.length + ' items')}</h2>
+    <p class="sub" style="margin:0">Pick a folder, then tap <b>${verb}</b>.</p>
     <nav class="crumbs picker-crumbs" id="pCrumbs"></nav>
     <div class="picker-list" id="pList"></div>
     <div class="right" style="justify-content:space-between">
       <button id="pNew">+ New folder</button>
-      <span style="display:flex;gap:8px"><button data-close>Cancel</button><button class="primary" id="pMove">Move here</button></span>
+      <span style="display:flex;gap:8px"><button data-close>Cancel</button><button class="primary" id="pMove">${verb}</button></span>
     </div>`, 'move');
   const pNames = () => pstack.slice(1).map(s => s.name);
   const blocked = () => {
+    if (save) return '';
     const t = pNames();
     if (!searchQ && samePath(t, curNames())) return 'Already here';
     if (!searchQ && its.some(it => it.kind === 'folder' && isInside(t, [...curNames(), it.name]))) return "Can't move a folder into itself";
@@ -974,7 +979,7 @@ function showMovePicker(its) {
   const draw = async () => {
     $('#pCrumbs').innerHTML = pstack.map((s, i) => `<a data-pc="${i}">${escH(s.name)}</a>`).join('<span class="sep">›</span>');
     const why = blocked(); const mv = $('#pMove');
-    mv.disabled = !!why; mv.title = why; mv.textContent = why || 'Move here';
+    mv.disabled = !!why; mv.title = why; mv.textContent = why || verb;
     const list = $('#pList'); list.innerHTML = '<div class="spinner"></div>';
     const loc = pstack[pstack.length - 1], refs = locRefs(loc), names = pNames();
     refs.forEach(r => seed(r.email, names, r.id));
@@ -987,7 +992,7 @@ function showMovePicker(its) {
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     list.innerHTML = folders.length
       ? folders.map((f, i) => `<div class="row" data-pf="${i}"><span class="ic folder">${FOLDER_SVG}</span><div class="nm"><div class="t">${escH(f.name)}</div></div><span class="st">›</span></div>`).join('')
-      : '<div class="empty" style="padding:40px 10px">No folders here. You can move into this folder or create a new one.</div>';
+      : `<div class="empty" style="padding:40px 10px">No folders here. You can ${save ? 'save' : 'move'} into this folder or create a new one.</div>`;
   };
   $('#pList').onclick = e => { const r = e.target.closest('[data-pf]'); if (r) { const f = folders[+r.dataset.pf]; pstack.push({ name: f.name, refs: f.refs }); draw(); } };
   $('#pCrumbs').onclick = e => { const c = e.target.closest('[data-pc]'); if (c) { pstack = pstack.slice(0, +c.dataset.pc + 1); draw(); } };
@@ -998,7 +1003,7 @@ function showMovePicker(its) {
     if (!a) return toast('Reconnect an account first', true);
     try { await ensureFolderPath(a, [...pNames(), n.trim()]); draw(); } catch (e) { handleErr(e); }
   };
-  $('#pMove').onclick = () => { const t = pNames(); $('#modal').dataset.locked = ''; closeModal(); moveItems(its, t); };
+  $('#pMove').onclick = () => { const t = pNames(); $('#modal').dataset.locked = ''; closeModal(); if (save) save.onPick(t); else moveItems(its, t); };
   draw();
 }
 
@@ -1918,6 +1923,38 @@ setHH(); addEventListener('resize', setHH);
 renderSpace();
 (async () => { try { await refreshAll(); } catch {} renderSpace(); updateBanner(); reload(); })();
 if (!cfg.clientId) showSetup();
+
+/* ---------------- App install + "Share → PoolDrive" from other apps ---------------- */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+async function takeShared() {   // files the service worker received from the phone's Share menu
+  const d = await new Promise((ok, bad) => { const r = indexedDB.open('pooldrive-share', 1); r.onupgradeneeded = () => r.result.createObjectStore('inbox'); r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); });
+  return new Promise(ok => { const t = d.transaction('inbox', 'readwrite'), st = t.objectStore('inbox'), g = st.get('pending');
+    g.onsuccess = () => { st.delete('pending'); ok(g.result || null); }; g.onerror = () => ok(null); });
+}
+async function receiveShare() {
+  history.replaceState(null, '', location.pathname);
+  const sh = await takeShared().catch(() => null);
+  if (!sh) return;
+  const files = (sh.files || []).slice();
+  if (!files.length) {   // a link or text was shared: keep it as a small text file
+    const body = [sh.title, sh.text, sh.url].filter(Boolean).join('\n');
+    if (!body.trim()) return toast('Nothing to save', true);
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    const nm = (sh.url || /^https?:\/\//.test(sh.text) ? 'Link ' : 'Note ') + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + '.' + p(d.getMinutes()) + '.txt';
+    files.push(new File([body], nm, { type: 'text/plain' }));
+  }
+  const ask = () => {
+    if (!cfg.clientId || !accounts.length) return toast('Add a Google account in PoolDrive first', true);
+    if (!live().length) { toast('Reconnect your accounts, then share again', true); return showReconnectBox && showReconnectBox(); }
+    showMovePicker(files.map(f => ({ name: f.name })), {
+      title: files.length === 1 ? 'Save “' + files[0].name + '” to PoolDrive' : 'Save ' + files.length + ' files to PoolDrive',
+      onPick: async names => { await navigateNames(names); startUpload(files.map(f => ({ file: f, dirs: [] }))); }
+    });
+  };
+  try { await refreshAll(); } catch {}
+  ask();
+}
+if (/[?&]share=1/.test(location.search)) receiveShare();
 </script>
 </body>
 </html>
