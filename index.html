@@ -234,6 +234,7 @@ body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
 .atab small{font-size:12.5px;color:var(--muted)}
 .atab span{font-size:13px;font-weight:600}
 .atab.on{border:2px solid var(--accent);background:var(--accent-soft)}
+.atab.zero:not(.on) b{color:var(--muted)}
 .atab.on span{color:var(--accent)}
 .apanel-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
 .apanel-h h2{margin:0;font-size:16px}
@@ -516,6 +517,8 @@ function removeAccount(a) {
 }
 
 function accountsChanged() {
+  // an account came back or was added since the last scan: scan again so Analysis covers it
+  if (scan && live().some(a => !scan.scanned.includes(a.email))) scan = null;
   fcache.clear(); renderSpace(); updateBanner();
   if ($('#modal').dataset.view === 'accounts') showAccounts();
   reload();
@@ -1142,7 +1145,7 @@ async function runScan() {
     .map(f => { const e = enrich(f); return { ...e, refs: [{ email: f.email, id: f.id }], locked: isLockedF(f) }; });
 
   scan = {
-    when: new Date(), total: all.length, usedBytes,
+    when: new Date(), total: all.length, usedBytes, scanned: live().map(a => a.email),
     types: TYPE_DEFS.map(([n, c]) => ({ name: n, color: c, bytes: types.get(n) })).filter(t => t.bytes > 0),
     large: files.slice().sort((a, b) => b.size - a.size).slice(0, 100),
     largeCount: files.filter(f => +f.size >= LARGE_MIN).length,
@@ -1169,6 +1172,7 @@ function renderAnalysis() {
     return;
   }
   const S = scan;
+  const missing = accounts.filter(a => !S.scanned.includes(a.email));
   const tabs = [
     ['large', 'Large files', S.largeCount.toLocaleString(), 'Over 25 MB each'],
     ['dup', 'Duplicates', S.dupCount.toLocaleString() + ' group' + (S.dupCount === 1 ? '' : 's'), fmt(S.dupWaste) + ' wasted'],
@@ -1211,14 +1215,17 @@ function renderAnalysis() {
   const actionDisabled = anaTab !== 'dup' && !selCount;
   el.innerHTML = `
     <div class="ana-head"><div style="flex:1 1 320px"><h1>Analysis</h1>
-      <p>${S.total.toLocaleString()} items across ${live().length} account${live().length > 1 ? 's' : ''}. Scanned at ${S.when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.${scanning ? ' Rescanning…' : ''}</p></div>
+      <p>${S.total.toLocaleString()} items across ${S.scanned.length} account${S.scanned.length > 1 ? 's' : ''}. Scanned at ${S.when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.${scanning ? ' Rescanning…' : ''}</p></div>
       <button data-ascan ${scanning ? 'disabled' : ''}>↻ Scan again</button></div>
+    ${missing.length ? `<div class="card" style="padding:14px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-color:#f3dca8;background:#fff8e8;color:#7a4b00">
+      <span style="flex:1 1 300px">⚠ Only ${S.scanned.length} of ${accounts.length} accounts were scanned. ${missing.length === 1 ? 'One account needs' : missing.length + ' accounts need'} reconnecting, so these numbers are incomplete. Analysis rescans automatically after you reconnect.</span>
+      <button class="primary" data-reconall>Reconnect</button></div>` : ''}
     <section class="card" style="padding:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0;font-size:15px">Space by file type</h2><span style="font-size:13px;color:var(--muted)">${fmt(S.usedBytes)} in files</span></div>
       <div class="typebar">${S.types.map(t => `<i style="width:${t.bytes / Math.max(1, S.usedBytes) * 100}%;background:${t.color}" title="${t.name}: ${fmt(t.bytes)}"></i>`).join('')}</div>
       <div class="legend">${S.types.map(t => `<span><i style="background:${t.color}"></i>${t.name} <b>${fmt(t.bytes)}</b></span>`).join('')}</div>
     </section>
-    <div class="atabs" role="tablist">${tabs.map(([id, l, c, h]) => `<button role="tab" aria-selected="${anaTab === id}" class="atab${anaTab === id ? ' on' : ''}" data-atab="${id}"><span>${l}</span><b>${c}</b><small>${h}</small></button>`).join('')}</div>
+    <div class="atabs" role="tablist">${tabs.map(([id, l, c, h]) => `<button role="tab" aria-selected="${anaTab === id}" class="atab${anaTab === id ? ' on' : ''}${/^0\b/.test(c) ? ' zero' : ''}" data-atab="${id}"><span>${l}</span><b>${c}</b><small>${/^0\b/.test(c) ? 'None found' : h}</small></button>`).join('')}</div>
     <section class="card" style="overflow:hidden">
       <div class="apanel-h"><div><h2>${pt}</h2><p>${ph}</p></div>
         <span style="display:flex;gap:8px;align-items:center">${anaTab !== 'dup' && list.length ? `<button data-aall>${selCount === list.length ? 'Clear' : 'Select all'}</button>` : ''}
