@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PoolDrive</title>
+<meta name="theme-color" content="#4f46e5">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--bg:#f6f6f8;--card:#fff;--text:#1b1b20;--muted:#6c6c78;--line:#e5e5ea;--hover:#f1f1f5;--accent:#4f46e5;--accent-soft:#eef0ff;--danger:#e5484d;--ok:#30a46c;--warn:#f5a524;--r:14px;--shadow:0 8px 30px rgba(20,20,40,.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#111115;--card:#1a1a20;--text:#ececf1;--muted:#9b9ba8;--line:#2b2b33;--hover:#22222a;--accent:#7c74ff;--accent-soft:#25243c;--shadow:0 8px 30px rgba(0,0,0,.5)}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px;white-space:nowrap}
+button:hover{background:var(--hover)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.08)}
+button.ghost{border-color:transparent;background:transparent}
+button.danger{color:var(--danger)}
+button:disabled{opacity:.5;cursor:default}
+.hidden{display:none!important}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#22b8cf);display:grid;place-items:center;color:#fff}
+.space{flex:1;max-width:420px;margin-left:auto;cursor:pointer;padding:6px 10px;border-radius:10px}
+.space:hover{background:var(--hover)}
+.space-text{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.space-text b{color:var(--text)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:5px;display:flex}
+.bar>i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.bar.red>i{background:var(--danger)} .bar.amber>i{background:var(--warn)}
+
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 20px;background:#fff6e5;color:#7a4b00;border-bottom:1px solid #f3dca8;font-size:14px}
+@media (prefers-color-scheme:dark){.banner{background:#2f2410;color:#f5cf86;border-color:#4a3812}}
+.banner button{padding:4px 10px;font-size:13px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 20px 120px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:2px;font-size:17px;font-weight:600;min-width:0;flex:1}
+.crumbs a{padding:4px 8px;border-radius:8px;cursor:pointer;color:var(--muted);text-decoration:none}
+.crumbs a:hover{background:var(--hover);color:var(--text)}
+.crumbs a:last-child{color:var(--text)}
+.crumbs .sep{color:var(--muted)}
+.search{position:relative;flex:1 1 260px;max-width:380px}
+.search input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none}
+.search input:focus{border-color:var(--accent)}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.actions{display:flex;gap:8px;align-items:center}
+.actions select{padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+
+/* list */
+.list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--hover)}
+.ic{flex:none;width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--c)}
+.ic.folder{background:transparent;color:#f4b400}
+.nm{flex:1;min-width:0}
+.nm .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.nm .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.more{flex:none;border:0;background:transparent;padding:6px 8px;border-radius:8px;color:var(--muted);font-size:18px;line-height:1}
+.more:hover{background:var(--line)}
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--text);margin:0 0 6px}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* drop overlay */
+#drop{position:fixed;inset:0;z-index:60;background:rgba(79,70,229,.12);border:3px dashed var(--accent);display:grid;place-items:center;font-size:22px;font-weight:700;color:var(--accent);backdrop-filter:blur(2px)}
+
+/* upload panel */
+.uploads{position:fixed;right:16px;bottom:16px;z-index:40;width:min(380px,calc(100vw - 32px));background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.up-head{display:flex;align-items:center;gap:8px;padding:12px 14px;font-weight:600;border-bottom:1px solid var(--line)}
+.up-head span{flex:1}
+.up-head .bar{margin:0;height:4px;border-radius:0;position:absolute;left:0;right:0;bottom:0}
+.up-list{max-height:260px;overflow:auto}
+.up-item{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13.5px;border-bottom:1px solid var(--line)}
+.up-item:last-child{border-bottom:0}
+.up-item .nm .s{font-size:12px}
+.st{flex:none;font-size:12px;color:var(--muted)}
+.st.ok{color:var(--ok)} .st.err{color:var(--danger)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,10,20,.45);display:grid;place-items:center;padding:16px}
+.sheet{background:var(--card);border-radius:18px;box-shadow:var(--shadow);width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:22px}
+.sheet.wide{width:min(1000px,100%);height:calc(100vh - 32px);display:flex;flex-direction:column;padding:0;overflow:hidden}
+.sheet h2{margin:0 0 4px;font-size:20px}
+.sheet .sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.sheet-head .t{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv{flex:1;display:grid;place-items:center;overflow:auto;background:var(--bg)}
+.pv img{max-width:100%;max-height:100%;object-fit:contain}
+.pv iframe{width:100%;height:100%;border:0;background:#fff}
+.pv pre{width:100%;height:100%;margin:0;padding:16px;white-space:pre-wrap;overflow:auto;font-size:13px}
+.acc{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.acc img,.acc .av{width:40px;height:40px;border-radius:50%;flex:none;background:var(--accent-soft);display:grid;place-items:center;font-weight:700;color:var(--accent)}
+.acc .nm .bar{margin-top:6px}
+.chip{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:1px}
+.chip.bad{background:#fde8e8;color:var(--danger)}
+@media (prefers-color-scheme:dark){.chip.bad{background:#3a1a1c}}
+.acc-btns{display:flex;flex-direction:column;gap:6px}
+.acc-btns button{padding:5px 10px;font-size:13px}
+.field{display:block;margin:14px 0}
+.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.field input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);outline:none}
+.field input:focus{border-color:var(--accent)}
+.check{display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:14px;cursor:pointer}
+.check input{margin-top:3px;accent-color:var(--accent)}
+.check small{display:block;color:var(--muted)}
+ol.steps{padding-left:20px;margin:0}
+ol.steps li{margin:0 0 10px}
+code,.code{background:var(--accent-soft);color:var(--accent);padding:1px 6px;border-radius:6px;font-size:13px;word-break:break-all}
+.note{font-size:13px;color:var(--muted);background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:14px}
+.info-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.info-row b{width:110px;flex:none;color:var(--muted);font-weight:500}
+.info-row span{word-break:break-all}
+.right{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+
+/* menu + toast */
+.menu{position:fixed;z-index:55;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;min-width:200px}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 12px;border-radius:8px}
+.menu button:hover{background:var(--hover)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:#1f1f26;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);max-width:90vw;animation:pop .2s}
+.toast.err{background:var(--danger)}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+
+@media (max-width:640px){
+  .top{flex-wrap:wrap;padding:10px 14px;gap:8px}
+  .space{order:3;flex-basis:100%;max-width:none;margin:0;padding:4px 0}
+  #btnAccounts{margin-left:auto}
+  main{padding:12px 12px 120px}
+  .search{max-width:none;flex-basis:100%;order:2}
+  .crumbs{flex-basis:100%;order:1;font-size:16px}
+  .actions{order:3;width:100%}
+  .actions select{flex:1}
+  .hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>PoolDrive</div>
+  <div class="space" id="space" title="Open accounts">
+    <div class="space-text"><span><b id="freeTxt">—</b> free</span><span id="totalTxt"></span></div>
+    <div class="bar" id="totalBar"><i style="width:0"></i></div>
+  </div>
+  <button id="btnAccounts">Accounts</button>
+</header>
+<div id="banner" class="banner hidden"></div>
+
+<main>
+  <div class="toolbar">
+    <nav class="crumbs" id="crumbs"></nav>
+    <label class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" type="search" placeholder="Search all accounts" autocomplete="off">
+    </label>
+    <div class="actions">
+      <select id="sort" title="Sort">
+        <option value="name">Name</option>
+        <option value="modified">Last modified</option>
+        <option value="size">Size</option>
+      </select>
+      <button id="btnNewFolder">+ Folder</button>
+      <button id="btnUpload" class="primary">Upload</button>
+    </div>
+  </div>
+  <div id="list"></div>
+</main>
+
+<input type="file" id="fileInput" multiple hidden>
+<input type="file" id="folderInput" webkitdirectory multiple hidden>
+<div id="drop" class="hidden">Drop files or folders to upload</div>
+<div id="uploads" class="uploads hidden"></div>
+<div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
+<div id="menu" class="menu hidden"></div>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   PoolDrive: several Google Drive accounts used as one drive.
+   Everything runs in the browser. Sign-in tokens stay on this
+   device (localStorage) and go only to Google.
+   ============================================================ */
+
+// Optional: paste your OAuth Client ID here so you never see the setup screen.
+const HARDCODED_CLIENT_ID = '';
+
+const SCOPE  = 'https://www.googleapis.com/auth/drive';
+const FOLDER = 'application/vnd.google-apps.folder';
+const API    = 'https://www.googleapis.com/drive/v3/';
+const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+const FIELDS = 'id,name,mimeType,size,modifiedTime,webViewLink,parents';
+const MARGIN = 5 * 1024 * 1024;           // keep 5 MB spare in every account
+const PARALLEL = 3;                        // uploads at the same time
+const LS = { cfg: 'pooldrive.cfg.v1', acc: 'pooldrive.accounts.v1' };
+
+const $ = s => document.querySelector(s);
+const load  = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+let cfg = Object.assign({ clientId: '', keepTogether: true, sort: 'name' }, load(LS.cfg, {}));
+if (HARDCODED_CLIENT_ID) cfg.clientId = HARDCODED_CLIENT_ID;
+let accounts = load(LS.acc, []);   // {email,name,photo,token,exp,limit,usage}
+const saveCfg = () => store(LS.cfg, cfg);
+const saveAcc = () => store(LS.acc, accounts);
+
+const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const escQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const qs = o => new URLSearchParams(o).toString();
+function fmt(b) {
+  if (b === Infinity) return 'Unlimited';
+  if (b == null || isNaN(b)) return '—';
+  const u = ['B','KB','MB','GB','TB']; let i = 0; b = +b;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return (i ? b.toFixed(b < 10 ? 1 : 0) : b) + ' ' + u[i];
+}
+const fmtDate = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const isLive = a => !!a && !!a.token && a.exp > Date.now() + 30000;
+const live = () => accounts.filter(isLive);
+const accBy = e => accounts.find(a => a.email === e);
+const freeOf = a => a.limit ? Math.max(0, a.limit - a.usage) : Infinity;
+const isTouch = matchMedia('(pointer:coarse)').matches;
+
+class AuthErr extends Error { constructor(a) { super('Sign-in expired for ' + (a?.email || 'an account')); this.acc = a; } }
+
+/* ---------------- Google API ---------------- */
+async function api(a, path, opts = {}) {
+  if (!isLive(a)) throw new AuthErr(a);
+  const r = await fetch(path.startsWith('http') ? path : API + path, {
+    ...opts, headers: { Authorization: 'Bearer ' + a.token, ...(opts.headers || {}) }
+  });
+  if (r.status === 401) { a.exp = 0; saveAcc(); updateBanner(); throw new AuthErr(a); }
+  if (!r.ok) {
+    let m = 'Error ' + r.status;
+    try { const j = await r.json(); m = j.error?.message || m; } catch {}
+    throw new Error(m);
+  }
+  if (opts.raw) return r;
+  return r.status === 204 ? null : r.json();
+}
+const jsonOpts = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+function gisReady() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  return new Promise((res, rej) => {
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.google?.accounts?.oauth2) { clearInterval(t); res(); }
+      else if (++n > 80) { clearInterval(t); rej(new Error('Google sign-in could not load. Check your internet connection.')); }
+    }, 100);
+  });
+}
+
+async function getToken(hint, prompt) {
+  if (!cfg.clientId) { showSetup(); throw new Error('Add your Client ID first'); }
+  await gisReady();
+  return new Promise((res, rej) => {
+    const tc = google.accounts.oauth2.initTokenClient({
+      client_id: cfg.clientId, scope: SCOPE, prompt, hint, login_hint: hint,
+      callback: r => {
+        if (r.error) return rej(new Error(r.error_description || r.error));
+        if (!google.accounts.oauth2.hasGrantedAllScopes(r, SCOPE))
+          return rej(new Error('Please tick the "See, edit, create and delete your Google Drive files" box'));
+        res(r);
+      },
+      error_callback: e => rej(new Error(e.type === 'popup_closed' ? 'Sign-in window was closed'
+        : e.type === 'popup_failed_to_open' ? 'Pop-up blocked. Allow pop-ups for this site.' : (e.message || e.type)))
+    });
+    tc.requestAccessToken({ prompt, hint, login_hint: hint });
+  });
+}
+
+async function refreshAbout(a) {
+  const r = await api(a, 'about?fields=' + encodeURIComponent('user(displayName,emailAddress,photoLink),storageQuota(limit,usage)'));
+  a.email = r.user.emailAddress; a.name = r.user.displayName; a.photo = r.user.photoLink || '';
+  a.limit = r.storageQuota.limit ? +r.storageQuota.limit : 0;
+  a.usage = +r.storageQuota.usage || 0;
+  return a;
+}
+
+async function addAccount() {
+  try {
+    const r = await getToken(undefined, 'select_account consent');
+    const t = { token: r.access_token, exp: Date.now() + r.expires_in * 1000 };
+    await refreshAbout(t);
+    const ex = accBy(t.email);
+    if (ex) { Object.assign(ex, t); toast('Reconnected ' + t.email); }
+    else { accounts.push(t); toast('Added ' + t.email); }
+    saveAcc(); accountsChanged();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function reconnect(a) {
+  try {
+    const r = await getToken(a.email, '');
+    const t = { token: r.access_token, exp: Date.now() + r.expires_in * 1000 };
+    await refreshAbout(t);
+    if (t.email !== a.email) {
+      const other = accBy(t.email);
+      if (other) Object.assign(other, t); else accounts.push(t);
+      saveAcc(); accountsChanged();
+      return toast(`You picked ${t.email}. Tap Reconnect again and choose ${a.email}.`, true);
+    }
+    Object.assign(a, t); saveAcc(); accountsChanged();
+  } catch (e) { toast(e.message, true); }
+}
+
+function removeAccount(a) {
+  if (!confirm(`Remove ${a.email} from PoolDrive?\n\nNothing is deleted from Google Drive; its files just stop showing here.`)) return;
+  try { if (a.token) google.accounts.oauth2.revoke(a.token, () => {}); } catch {}
+  accounts = accounts.filter(x => x !== a); saveAcc(); accountsChanged();
+}
+
+function accountsChanged() {
+  fcache.clear(); renderSpace(); updateBanner();
+  if ($('#modal').dataset.view === 'accounts') showAccounts();
+  reload();
+}
+
+/* ---------------- Merged folders ---------------- */
+// A location is a merged folder: {name, refs:[{email,id}]}. Root = refs null (My Drive of every account).
+let stack = [{ name: 'All files', refs: null }];
+const curNames = () => stack.slice(1).map(s => s.name);
+const locRefs = loc => loc.refs
+  ? loc.refs.filter(r => isLive(accBy(r.email)))
+  : live().map(a => ({ email: a.email, id: 'root' }));
+
+// folder id cache per account + path, so uploads reuse (or create) the right folders
+const fcache = new Map();
+const fkey = (email, names) => email + '::' + names.join('/');
+function seed(email, names, id) { const k = fkey(email, names); if (!fcache.has(k)) fcache.set(k, Promise.resolve(id)); }
+function ensureFolderPath(a, names) {
+  if (!names.length) return Promise.resolve('root');
+  const k = fkey(a.email, names);
+  if (fcache.has(k)) return fcache.get(k);
+  const p = (async () => {
+    const parent = await ensureFolderPath(a, names.slice(0, -1));
+    const name = names[names.length - 1];
+    const r = await api(a, 'files?' + qs({ q: `name='${escQ(name)}' and '${parent}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id)', pageSize: 1 }));
+    if (r.files.length) return r.files[0].id;
+    const c = await api(a, 'files?fields=id', jsonOpts('POST', { name, mimeType: FOLDER, parents: [parent] }));
+    return c.id;
+  })();
+  fcache.set(k, p);
+  p.catch(() => fcache.delete(k));
+  return p;
+}
+
+async function listChildren(a, id) {
+  const out = []; let tok;
+  do {
+    const p = { q: `'${id}' in parents and trashed=false`, fields: `nextPageToken,files(${FIELDS})`, pageSize: 1000 };
+    if (tok) p.pageToken = tok;
+    const r = await api(a, 'files?' + qs(p));
+    out.push(...r.files); tok = r.nextPageToken;
+  } while (tok);
+  return out;
+}
+
+function merge(groups) {
+  const folders = new Map(), files = [];
+  for (const { email, items } of groups) for (const f of items) {
+    if (f.mimeType === FOLDER) {
+      let e = folders.get(f.name);
+      if (!e) { e = { kind: 'folder', name: f.name, refs: [], modifiedTime: f.modifiedTime }; folders.set(f.name, e); }
+      e.refs.push({ email, id: f.id });
+      if ((f.modifiedTime || '') > (e.modifiedTime || '')) e.modifiedTime = f.modifiedTime;
+    } else files.push({ kind: 'file', ...f, email });
+  }
+  return [...folders.values(), ...files];
+}
+
+/* ---------------- Loading & search ---------------- */
+let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
+
+async function reload() {
+  renderCrumbs();
+  if (!cfg.clientId) return renderList();
+  if (!accounts.length) { items = []; return renderList(); }
+  if (searchQ) return doSearch();
+  const seq = ++loadSeq;
+  const refs = locRefs(stack[stack.length - 1]);
+  const names = curNames();
+  refs.forEach(r => seed(r.email, names, r.id));
+  loading = true; renderList();
+  const res = await Promise.allSettled(refs.map(async r => ({ email: r.email, items: await listChildren(accBy(r.email), r.id) })));
+  if (seq !== loadSeq) return;
+  res.forEach(x => { if (x.status === 'rejected' && !(x.reason instanceof AuthErr)) toast(x.reason.message, true); });
+  items = merge(res.filter(x => x.status === 'fulfilled').map(x => x.value));
+  loading = false; renderList();
+}
+
+async function doSearch() {
+  const seq = ++loadSeq; loading = true; renderList();
+  const q = searchQ;
+  const res = await Promise.allSettled(live().map(async a => {
+    const r = await api(a, 'files?' + qs({ q: `name contains '${escQ(q)}' and trashed=false`, fields: `files(${FIELDS})`, pageSize: 200 }));
+    return { email: a.email, items: r.files };
+  }));
+  if (seq !== loadSeq) return;
+  items = [];
+  res.forEach(x => {
+    if (x.status !== 'fulfilled') return;
+    for (const f of x.value.items) items.push(f.mimeType === FOLDER
+      ? { kind: 'folder', name: f.name, refs: [{ email: x.value.email, id: f.id }], modifiedTime: f.modifiedTime, fromSearch: true, email: x.value.email, id: f.id }
+      : { kind: 'file', ...f, email: x.value.email, fromSearch: true });
+  });
+  loading = false; renderList();
+}
+
+function clearSearch() { searchQ = ''; $('#search').value = ''; }
+
+// Path of a folder inside its account's My Drive, as folder names.
+async function pathOf(a, id) {
+  const names = []; let cur = id;
+  for (let i = 0; i < 40; i++) {
+    const f = await api(a, `files/${cur}?fields=name,parents`);
+    if (!f.parents || !f.parents.length) break;   // reached My Drive
+    names.unshift(f.name); cur = f.parents[0];
+  }
+  return names;
+}
+// Walk the merged tree by names so the folder shows its content from every account.
+async function navigateNames(names) {
+  clearSearch(); stack = [stack[0]];
+  for (const n of names) {
+    const refs = locRefs(stack[stack.length - 1]); const found = [];
+    await Promise.allSettled(refs.map(async r => {
+      const q = await api(accBy(r.email), 'files?' + qs({ q: `name='${escQ(n)}' and '${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id)' }));
+      q.files.forEach(f => found.push({ email: r.email, id: f.id }));
+    }));
+    if (!found.length) break;
+    stack.push({ name: n, refs: found });
+  }
+  reload();
+}
+async function goToLocation(it) {
+  const a = accBy(it.email);
+  try {
+    const target = it.kind === 'folder' ? it.id : (it.parents || [])[0];
+    if (!target) throw new Error('No folder');
+    const names = await pathOf(a, target);
+    await navigateNames(names);
+  } catch (e) {
+    if (it.kind === 'folder') { clearSearch(); stack = [stack[0], { name: it.name, refs: it.refs }]; reload(); }
+    else toast('This file is not inside your My Drive folders (it may be shared with you).', true);
+  }
+}
+
+/* ---------------- Rendering ---------------- */
+function typeOf(f) {
+  if (f.kind === 'folder') return ['folder', '', ''];
+  const m = f.mimeType || '', ext = (f.name.includes('.') ? f.name.split('.').pop() : '').toLowerCase();
+  if (m === 'application/pdf') return ['pdf', 'PDF', '#e5484d'];
+  if (m.startsWith('image/')) return ['image', 'IMG', '#30a46c'];
+  if (m.startsWith('video/')) return ['video', 'VID', '#8e4ec6'];
+  if (m.startsWith('audio/')) return ['audio', 'AUD', '#d6409f'];
+  if (m === 'application/vnd.google-apps.document' || /^docx?$/.test(ext)) return ['doc', 'DOC', '#3e63dd'];
+  if (m === 'application/vnd.google-apps.spreadsheet' || /^(xlsx?|csv)$/.test(ext)) return ['sheet', 'XLS', '#18794e'];
+  if (m === 'application/vnd.google-apps.presentation' || /^pptx?$/.test(ext)) return ['slides', 'PPT', '#f76b15'];
+  if (/^(zip|rar|7z|tar|gz)$/.test(ext)) return ['zip', 'ZIP', '#6f6e77'];
+  if (m.startsWith('text/') || /^(json|md|js|html|css)$/.test(ext)) return ['text', 'TXT', '#6f6e77'];
+  if (m.startsWith('application/vnd.google-apps.')) return ['gapp', 'G', '#4285f4'];
+  return ['file', (ext || 'FILE').slice(0, 4).toUpperCase(), '#8b8d98'];
+}
+const FOLDER_SVG = '<svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>';
+
+function renderCrumbs() {
+  const c = $('#crumbs');
+  if (searchQ) { c.innerHTML = `<a data-c="clear">All files</a><span class="sep">›</span><a>Search: “${escH(searchQ)}”</a>`; return; }
+  c.innerHTML = stack.map((s, i) => `<a data-c="${i}">${escH(s.name)}</a>`).join('<span class="sep">›</span>');
+}
+
+function sortedItems() {
+  const s = cfg.sort;
+  return [...items].sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+    if (s === 'modified') return (b.modifiedTime || '').localeCompare(a.modifiedTime || '');
+    if (s === 'size') return (+b.size || 0) - (+a.size || 0);
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
+function renderList() {
+  const el = $('#list');
+  if (!cfg.clientId) {
+    el.innerHTML = `<div class="list empty"><h3>One-time setup needed</h3><p>PoolDrive needs a Google Client ID before it can sign in.</p><button class="primary" onclick="showSetup()">Open setup</button></div>`; return;
+  }
+  if (!accounts.length) {
+    el.innerHTML = `<div class="list empty"><h3>Add your first Google account</h3><p>Add every Google account you want to pool. Their free space is combined into one drive.</p><button class="primary" onclick="addAccount()">+ Add Google account</button></div>`; return;
+  }
+  if (loading) { el.innerHTML = '<div class="list"><div class="spinner"></div></div>'; return; }
+  view = sortedItems();
+  if (!view.length) {
+    el.innerHTML = `<div class="list empty">${searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
+      : `<h3>This folder is empty</h3><p>Drop files here or tap Upload.</p>`}</div>`; return;
+  }
+  el.innerHTML = '<div class="list">' + view.map((it, i) => {
+    const [t, label, color] = typeOf(it);
+    const icon = t === 'folder' ? `<span class="ic folder">${FOLDER_SVG}</span>` : `<span class="ic" style="--c:${color}">${label}</span>`;
+    const meta = it.kind === 'folder'
+      ? ['Folder', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ')
+      : [it.size ? fmt(+it.size) : (it.mimeType || '').startsWith('application/vnd.google-apps.') ? 'Google file' : '', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ');
+    return `<div class="row" data-i="${i}">${icon}<div class="nm"><div class="t">${escH(it.name)}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
+  }).join('') + '</div>';
+}
+
+function renderSpace() {
+  const all = accounts;
+  const unlimited = all.some(a => !a.limit);
+  const total = all.reduce((s, a) => s + (a.limit || 0), 0);
+  const used = all.reduce((s, a) => s + (a.usage || 0), 0);
+  const free = unlimited ? Infinity : Math.max(0, total - used);
+  $('#freeTxt').textContent = all.length ? fmt(free) : '—';
+  $('#totalTxt').textContent = all.length ? `${fmt(used)} used of ${unlimited ? 'unlimited' : fmt(total)} · ${all.length} account${all.length > 1 ? 's' : ''}` : 'No accounts yet';
+  const pct = total ? Math.min(100, used / total * 100) : 0;
+  const bar = $('#totalBar'); bar.firstElementChild.style.width = pct + '%';
+  bar.className = 'bar' + (pct > 90 ? ' red' : pct > 75 ? ' amber' : '');
+}
+
+function updateBanner() {
+  const dead = accounts.filter(a => !isLive(a));
+  const b = $('#banner');
+  if (!dead.length || !cfg.clientId) { b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  b.innerHTML = `<span>⚠ ${dead.length === 1 ? '1 account needs' : dead.length + ' accounts need'} a quick sign-in. Their files are hidden until then:</span>` +
+    dead.map(a => `<button data-recon="${escH(a.email)}">Reconnect ${escH(a.email)}</button>`).join('');
+}
+
+/* ---------------- Modals ---------------- */
+function showModal(html, viewName, opts = {}) {
+  const m = $('#modal'), s = $('#sheet');
+  s.className = 'sheet' + (opts.wide ? ' wide' : '');
+  s.innerHTML = html; m.dataset.view = viewName; m.dataset.locked = opts.locked ? '1' : '';
+  m.classList.remove('hidden');
+}
+function closeModal() {
+  const m = $('#modal'); if (m.dataset.locked) return;
+  m.classList.add('hidden'); m.dataset.view = '';
+  const s = $('#sheet'); s.querySelectorAll('[data-url]').forEach(x => URL.revokeObjectURL(x.dataset.url)); s.innerHTML = '';
+}
+
+function showSetup() {
+  const origin = location.origin.startsWith('http') ? location.origin : 'https://YOUR-NAME.github.io';
+  showModal(`
+    <h2>One-time setup (about 10 minutes)</h2>
+    <p class="sub">Google needs to know this app is yours before it lets it sign in. You only do this once.</p>
+    <ol class="steps">
+      <li>Open <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud Console</a> and create a project named <b>PoolDrive</b>.</li>
+      <li>Open <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Google Drive API</a> and click <b>Enable</b>.</li>
+      <li>Open <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">Google Auth Platform</a> → <b>Get started</b>. App name: PoolDrive, choose your email, Audience: <b>External</b>, then finish.</li>
+      <li>Go to <b>Audience</b> → <b>Test users</b> → <b>Add users</b>, and add <b>every Gmail account</b> you want to pool.</li>
+      <li>Go to <b>Clients</b> → <b>Create client</b> → type <b>Web application</b>. Under <b>Authorized JavaScript origins</b> add:<br><span class="code">${escH(origin)}</span></li>
+      <li>Click <b>Create</b>, copy the <b>Client ID</b> (ends in <code>.apps.googleusercontent.com</code>) and paste it below.</li>
+    </ol>
+    <label class="field"><span>Client ID</span><input type="text" id="cidInput" placeholder="1234567890-abc...apps.googleusercontent.com" value="${escH(cfg.clientId)}"></label>
+    <div class="note">When you sign in, Google will say <b>"Google hasn't verified this app"</b>. That's normal for your own app: click <b>Continue</b>.</div>
+    <div class="right">${cfg.clientId ? '<button data-close>Cancel</button>' : ''}<button class="primary" id="cidSave">Save</button></div>
+  `, 'setup', { locked: !cfg.clientId });
+  $('#cidSave').onclick = () => {
+    const v = $('#cidInput').value.trim();
+    if (!/\.apps\.googleusercontent\.com$/.test(v)) return toast('That does not look like a Client ID', true);
+    cfg.clientId = v; saveCfg(); $('#modal').dataset.locked = ''; closeModal(); updateBanner(); reload();
+    if (!accounts.length) toast('Saved. Now add your first Google account.');
+  };
+}
+
+function showAccounts() {
+  const rows = accounts.map((a, i) => {
+    const pct = a.limit ? Math.min(100, a.usage / a.limit * 100) : 0;
+    const av = a.photo ? `<img src="${escH(a.photo)}" alt="" referrerpolicy="no-referrer">` : `<div class="av">${escH((a.email || '?')[0].toUpperCase())}</div>`;
+    return `<div class="acc">${av}<div class="nm">
+        <div class="t">${escH(a.name || a.email)}${isLive(a) ? '' : '<span class="chip bad">needs sign-in</span>'}</div>
+        <div class="s">${escH(a.email)}</div>
+        <div class="bar${pct > 90 ? ' red' : pct > 75 ? ' amber' : ''}"><i style="width:${pct}%"></i></div>
+        <div class="s"><b>${fmt(freeOf(a))}</b> free · ${fmt(a.usage)} of ${a.limit ? fmt(a.limit) : 'unlimited'}</div>
+      </div><div class="acc-btns">
+        ${isLive(a) ? '' : `<button class="primary" data-recon="${escH(a.email)}">Reconnect</button>`}
+        <button class="danger" data-remove="${i}">Remove</button>
+      </div></div>`;
+  }).join('');
+  showModal(`
+    <h2>Accounts</h2>
+    <p class="sub">${accounts.length ? `Combined: <b>${escH($('#freeTxt').textContent)}</b> free. New uploads go to the account with the most free space.` : 'No accounts yet.'}</p>
+    ${rows}
+    <div class="right" style="justify-content:space-between">
+      <button id="refreshQuota">↻ Refresh space</button>
+      <button class="primary" id="addAcc">+ Add Google account</button>
+    </div>
+    <h2 style="margin-top:26px;font-size:16px">Settings</h2>
+    <label class="check"><input type="checkbox" id="keepTog" ${cfg.keepTogether ? 'checked' : ''}><span>Keep folders together<small>Files uploaded into a folder go to the account that already has that folder, while it has room. A dropped folder goes into one account if it fits.</small></span></label>
+    <div class="right" style="justify-content:space-between"><button class="ghost" id="editCid">Change Client ID</button><button data-close>Done</button></div>
+    <div class="note">Google keeps you signed in for about an hour at a time. After that, tap <b>Reconnect</b>. It's one tap, since you've already given permission.</div>
+  `, 'accounts');
+  $('#addAcc').onclick = addAccount;
+  $('#editCid').onclick = showSetup;
+  $('#keepTog').onchange = e => { cfg.keepTogether = e.target.checked; saveCfg(); };
+  $('#refreshQuota').onclick = async () => { await Promise.allSettled(live().map(refreshAbout)); saveAcc(); renderSpace(); showAccounts(); toast('Space updated'); };
+}
+
+function showInfo(it) {
+  const rows = it.kind === 'folder'
+    ? [['Name', it.name], ['Type', 'Folder'], ['Stored in', [...new Set(it.refs.map(r => r.email))].join(', ')], ['Modified', fmtDate(it.modifiedTime)]]
+    : [['Name', it.name], ['Size', it.size ? fmt(+it.size) : '—'], ['Type', it.mimeType], ['Stored in', it.email], ['Modified', it.modifiedTime ? new Date(it.modifiedTime).toLocaleString() : '']];
+  showModal(`<h2>Details</h2><div style="margin-top:10px">${rows.map(([k, v]) => `<div class="info-row"><b>${k}</b><span>${escH(v)}</span></div>`).join('')}</div>
+    <div class="right">${it.webViewLink ? `<a href="${escH(driveLink(it))}" target="_blank" rel="noopener"><button>Open in Google Drive</button></a>` : ''}<button class="primary" data-close>Close</button></div>`, 'info');
+}
+
+/* ---------------- Item actions ---------------- */
+const driveLink = f => f.webViewLink ? f.webViewLink + (f.webViewLink.includes('?') ? '&' : '?') + 'authuser=' + encodeURIComponent(f.email) : '#';
+
+function handleErr(e) {
+  if (e instanceof AuthErr) { toast(`Reconnect ${e.acc?.email} first`, true); updateBanner(); }
+  else toast(e.message, true);
+}
+
+function openItem(it) {
+  if (it.kind === 'folder') {
+    if (it.fromSearch) return goToLocation(it);
+    stack.push({ name: it.name, refs: it.refs }); reload(); window.scrollTo(0, 0); return;
+  }
+  openFile(it);
+}
+
+async function openFile(f) {
+  const [t] = typeOf(f);
+  const native = (f.mimeType || '').startsWith('application/vnd.google-apps.');
+  if (native || t === 'video' || t === 'audio' || (t === 'pdf' && isTouch)) { window.open(driveLink(f), '_blank', 'noopener'); return; }
+  if (!['image', 'pdf', 'text'].includes(t)) return downloadFile(f);
+  showModal(`<div class="sheet-head"><div class="t">${escH(f.name)}</div>
+      <button id="pvDl">Download</button><button data-close>✕</button></div>
+      <div class="pv" id="pv"><div class="spinner"></div></div>`, 'preview', { wide: true });
+  $('#pvDl').onclick = () => downloadFile(f);
+  try {
+    const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true });
+    const blob = await r.blob();
+    const pv = $('#pv'); if (!pv) return;
+    if (t === 'text') { pv.innerHTML = `<pre>${escH(await blob.text())}</pre>`; return; }
+    const url = URL.createObjectURL(t === 'pdf' ? new Blob([blob], { type: 'application/pdf' }) : blob);
+    pv.innerHTML = t === 'pdf' ? `<iframe src="${url}" data-url="${url}"></iframe>` : `<img src="${url}" data-url="${url}" alt="">`;
+  } catch (e) { closeModal(); handleErr(e); }
+}
+
+async function downloadFile(f) {
+  if ((f.mimeType || '').startsWith('application/vnd.google-apps.')) { window.open(driveLink(f), '_blank', 'noopener'); return; }
+  toast('Downloading ' + f.name + '…');
+  try {
+    const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true });
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { handleErr(e); }
+}
+
+async function renameItem(it) {
+  const n = prompt('Rename to', it.name);
+  if (!n || !n.trim() || n === it.name) return;
+  try {
+    const targets = it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }];
+    await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { name: n.trim() }))));
+    fcache.clear(); toast('Renamed'); reload();
+  } catch (e) { handleErr(e); }
+}
+
+async function deleteItem(it) {
+  const many = it.kind === 'folder' && it.refs.length > 1;
+  if (!confirm(`Move “${it.name}” to trash?${many ? `\n\nThis folder exists in ${it.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore it from Google Drive's Trash for 30 days.`)) return;
+  try {
+    const targets = it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }];
+    await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
+    fcache.clear(); toast('Moved to trash (it still uses space until the trash is emptied)'); reload();
+  } catch (e) { handleErr(e); }
+}
+
+async function newFolder() {
+  if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
+  const n = prompt('Folder name');
+  if (!n || !n.trim()) return;
+  if (searchQ) { clearSearch(); }
+  const names = [...curNames(), n.trim()];
+  const here = locRefs(stack[stack.length - 1]).map(r => accBy(r.email));
+  const pickFrom = (here.length ? here : live()).slice().sort((a, b) => freeOf(b) - freeOf(a));
+  try { await ensureFolderPath(pickFrom[0], names); toast('Folder created'); reload(); }
+  catch (e) { handleErr(e); }
+}
+
+function openMenu(it, anchor) {
+  const m = $('#menu');
+  const acts = it.kind === 'folder'
+    ? [['open', 'Open'], ['rename', 'Rename'], ['info', 'Details'], '-', ['delete', 'Move to trash']]
+    : [['open', 'Open'], ['download', 'Download'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
+  m.innerHTML = acts.map(a => a === '-' ? '<hr>' : `<button data-act="${a[0]}" class="${a[0] === 'delete' ? 'danger' : ''}">${a[1]}</button>`).join('');
+  m.classList.remove('hidden');
+  const r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + 'px';
+  m.style.top = (r.bottom + mh + 8 > innerHeight ? Math.max(8, r.top - mh - 4) : r.bottom + 4) + 'px';
+  m.onclick = e => {
+    const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
+    closeMenu();
+    ({ open: () => openItem(it), download: () => downloadFile(it), rename: () => renameItem(it), info: () => showInfo(it),
+       locate: () => goToLocation(it), drive: () => window.open(driveLink(it), '_blank', 'noopener'), delete: () => deleteItem(it) })[act]();
+  };
+}
+function closeMenu() { $('#menu').classList.add('hidden'); }
+
+function uploadMenu(anchor) {
+  const m = $('#menu');
+  m.innerHTML = '<button data-u="files">📄 Upload files</button><button data-u="folder">📁 Upload a folder</button>';
+  m.classList.remove('hidden');
+  const r = anchor.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = (r.bottom + 4) + 'px';
+  m.onclick = e => {
+    const u = e.target.closest('[data-u]')?.dataset.u; if (!u) return;
+    closeMenu(); (u === 'files' ? $('#fileInput') : $('#folderInput')).click();
+  };
+}
+
+/* ---------------- Smart upload ---------------- */
+let jobs = [], jobSeq = 0, running = 0, panelOpen = true;
+
+// Decide which account gets each file. Folders stay in one account when they fit.
+function planUpload(entries) {
+  const base = curNames();
+  const accs = live();
+  const free = new Map(accs.map(a => [a.email, freeOf(a)]));
+  const here = new Set(locRefs(stack[stack.length - 1]).map(r => r.email));
+  const size = u => u.reduce((s, e) => s + e.file.size, 0);
+  const groups = new Map(), units = [];
+  for (const e of entries) {
+    if (e.dirs.length) { const k = e.dirs[0]; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
+    else units.push([e]);
+  }
+  groups.forEach(g => units.push(g));
+  units.sort((a, b) => size(b) - size(a));
+  const pick = need => {
+    let c = accs.filter(a => free.get(a.email) >= need + MARGIN);
+    if (!c.length) return null;
+    if (cfg.keepTogether) { const p = c.filter(a => here.has(a.email)); if (p.length) c = p; }
+    return c.sort((a, b) => free.get(b.email) - free.get(a.email))[0];
+  };
+  const planned = [], tooBig = [];
+  const queue = units.slice();
+  while (queue.length) {
+    const u = queue.shift(), need = size(u), a = pick(need);
+    if (a) {
+      free.set(a.email, free.get(a.email) - need);
+      u.forEach(e => planned.push({ file: e.file, acc: a, path: [...base, ...e.dirs] }));
+    } else if (u.length > 1) {
+      u.forEach(e => queue.push([e]));            // folder too big for one account: spread its files
+      queue.sort((x, y) => size(y) - size(x));
+    } else tooBig.push(u[0].file);
+  }
+  return { planned, tooBig };
+}
+
+function startUpload(entries) {
+  entries = entries.filter(e => e.file);
+  if (!entries.length) return;
+  if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
+  if (searchQ) { clearSearch(); reload(); }
+  const { planned, tooBig } = planUpload(entries);
+  if (tooBig.length) {
+    const most = Math.max(...live().map(freeOf));
+    const list = tooBig.slice(0, 6).map(f => `• ${f.name} (${fmt(f.size)})`).join('\n') + (tooBig.length > 6 ? `\n…and ${tooBig.length - 6} more` : '');
+    const msg = `${tooBig.length} file${tooBig.length > 1 ? 's are' : ' is'} too big for any single account.\nMost free space in one account: ${fmt(most)}\n\n${list}`;
+    if (!planned.length) { alert(msg); return; }
+    if (!confirm(msg + `\n\nUpload the other ${planned.length} file${planned.length > 1 ? 's' : ''}?`)) return;
+  }
+  if (jobs.length && jobs.every(j => j.status === 'done' || j.status === 'error')) jobs = [];
+  planned.forEach(p => jobs.push({ ...p, id: ++jobSeq, loaded: 0, status: 'waiting' }));
+  panelOpen = true; renderUploads(); pump();
+}
+
+function pump() {
+  while (running < PARALLEL) {
+    const j = jobs.find(x => x.status === 'waiting');
+    if (!j) break;
+    running++;
+    runJob(j).finally(() => {
+      running--;
+      if (!jobs.some(x => x.status === 'waiting' || x.status === 'uploading')) batchDone();
+      pump();
+    });
+  }
+}
+
+async function runJob(j) {
+  j.status = 'uploading'; renderUploads();
+  try {
+    const parent = await ensureFolderPath(j.acc, j.path);
+    await uploadFile(j.acc, j.file, parent, l => { j.loaded = l; scheduleUploadsRender(); });
+    j.loaded = j.file.size; j.status = 'done';
+    j.acc.usage += j.file.size; saveAcc(); renderSpace();
+  } catch (e) { j.status = 'error'; j.err = e instanceof AuthErr ? 'Sign-in expired. Reconnect and retry.' : e.message; }
+  renderUploads();
+}
+
+async function uploadFile(a, file, parentId, onProgress) {
+  if (!isLive(a)) throw new AuthErr(a);
+  const type = file.type || 'application/octet-stream';
+  const meta = { name: file.name, parents: [parentId] };
+  const init = await fetch(UPLOAD + '?uploadType=resumable&fields=id', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + a.token, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type },
+    body: JSON.stringify(meta)
+  });
+  if (init.status === 401) { a.exp = 0; saveAcc(); updateBanner(); throw new AuthErr(a); }
+  if (!init.ok) { let m = 'Upload failed (' + init.status + ')'; try { m = (await init.json()).error?.message || m; } catch {} throw new Error(m); }
+  const session = init.headers.get('Location');
+  if (session) return sendXHR('PUT', session, file, { 'Content-Type': type }, onProgress);
+  // Fallback if the browser hides the session URL: one-shot multipart upload
+  const b = 'pooldrive' + Math.random().toString(36).slice(2);
+  const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: ${type}\r\n\r\n`, file, `\r\n--${b}--`]);
+  return sendXHR('POST', UPLOAD + '?uploadType=multipart&fields=id', body,
+    { Authorization: 'Bearer ' + a.token, 'Content-Type': 'multipart/related; boundary=' + b }, l => onProgress(Math.min(l, file.size)));
+}
+
+function sendXHR(method, url, body, headers, onProgress) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open(method, url);
+    Object.entries(headers).forEach(([k, v]) => x.setRequestHeader(k, v));
+    x.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded); };
+    x.onload = () => x.status < 300 ? res(x.responseText) : rej(new Error('Upload failed (' + x.status + ')'));
+    x.onerror = () => rej(new Error('Network error. Check your connection.'));
+    x.send(body);
+  });
+}
+
+async function batchDone() {
+  await Promise.allSettled(live().map(refreshAbout));
+  saveAcc(); renderSpace(); fcache.clear(); reload();
+  const done = jobs.filter(j => j.status === 'done').length, bad = jobs.filter(j => j.status === 'error').length;
+  toast(bad ? `${done} uploaded, ${bad} failed` : `${done} file${done > 1 ? 's' : ''} uploaded`, !!bad);
+}
+
+let uploadsRaf = 0;
+function scheduleUploadsRender() { if (!uploadsRaf) uploadsRaf = requestAnimationFrame(() => { uploadsRaf = 0; renderUploads(); }); }
+function renderUploads() {
+  const el = $('#uploads');
+  if (!jobs.length) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const total = jobs.reduce((s, j) => s + j.file.size, 0) || 1;
+  const loaded = jobs.reduce((s, j) => s + (j.status === 'error' ? j.file.size : j.loaded), 0);
+  const done = jobs.filter(j => j.status === 'done').length, bad = jobs.filter(j => j.status === 'error').length;
+  const finished = done + bad === jobs.length;
+  const pct = Math.round(loaded / total * 100);
+  const title = finished ? (bad ? `${done} uploaded · ${bad} failed` : `${done} upload${done > 1 ? 's' : ''} complete`) : `Uploading ${done + 1 > jobs.length ? jobs.length : done + 1} of ${jobs.length} · ${pct}%`;
+  el.innerHTML = `<div class="up-head" style="position:relative"><span>${title}</span>
+      ${bad && finished ? '<button class="ghost" id="upRetry" style="padding:4px 8px">Retry</button>' : ''}
+      <button class="ghost" id="upToggle" style="padding:4px 8px">${panelOpen ? '▾' : '▴'}</button>
+      ${finished ? '<button class="ghost" id="upClose" style="padding:4px 8px">✕</button>' : ''}
+      <div class="bar"><i style="width:${pct}%"></i></div></div>
+    <div class="up-list ${panelOpen ? '' : 'hidden'}">${jobs.slice().reverse().map(j => {
+      const p = j.file.size ? Math.round(j.loaded / j.file.size * 100) : 100;
+      const st = j.status === 'done' ? '<span class="st ok">✓</span>' : j.status === 'error' ? '<span class="st err">Failed</span>'
+        : j.status === 'uploading' ? `<span class="st">${p}%</span>` : '<span class="st">Waiting</span>';
+      const sub = j.status === 'error' ? j.err : `${fmt(j.file.size)}${j.path.length ? ' · ' + j.path.join(' / ') : ''}`;
+      return `<div class="up-item"><div class="nm"><div class="t">${escH(j.file.name)}</div><div class="s">${escH(sub)}</div></div>${st}</div>`;
+    }).join('')}</div>`;
+  $('#upToggle').onclick = () => { panelOpen = !panelOpen; renderUploads(); };
+  const c = $('#upClose'); if (c) c.onclick = () => { jobs = []; renderUploads(); };
+  const r = $('#upRetry'); if (r) r.onclick = () => {
+    // retry into the same folders; switch account only if the old one is signed out or full
+    jobs.filter(j => j.status === 'error').forEach(j => {
+      if (!isLive(j.acc) || freeOf(j.acc) < j.file.size + MARGIN) {
+        const alt = live().filter(a => freeOf(a) >= j.file.size + MARGIN).sort((a, b) => freeOf(b) - freeOf(a))[0];
+        if (alt) j.acc = alt;
+      }
+      j.status = 'waiting'; j.loaded = 0; j.err = '';
+    });
+    renderUploads(); pump();
+  };
+}
+
+/* ---------------- Drag & drop / pickers ---------------- */
+async function collectDrop(dt) {
+  const entries = [...dt.items].filter(i => i.kind === 'file').map(i => i.webkitGetAsEntry ? i.webkitGetAsEntry() : null);
+  const plain = [...dt.files];
+  if (!entries.length || entries.every(e => !e)) return plain.map(f => ({ file: f, dirs: [] }));
+  const out = [];
+  const walk = async (en, dirs) => {
+    if (en.isFile) out.push({ file: await new Promise((r, j) => en.file(r, j)), dirs });
+    else if (en.isDirectory) {
+      const rd = en.createReader(); let batch;
+      do {
+        batch = await new Promise((r, j) => rd.readEntries(r, j));
+        for (const c of batch) await walk(c, [...dirs, en.name]);
+      } while (batch.length);
+    }
+  };
+  await Promise.all(entries.filter(Boolean).map(e => walk(e, [])));
+  return out;
+}
+
+let dragDepth = 0;
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; $('#drop').classList.remove('hidden'); });
+addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('dragleave', e => { if (!hasFiles(e)) return; if (--dragDepth <= 0) { dragDepth = 0; $('#drop').classList.add('hidden'); } });
+addEventListener('drop', async e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; $('#drop').classList.add('hidden');
+  startUpload(await collectDrop(e.dataTransfer));
+});
+
+$('#fileInput').onchange = e => { startUpload([...e.target.files].map(f => ({ file: f, dirs: [] }))); e.target.value = ''; };
+$('#folderInput').onchange = e => {
+  startUpload([...e.target.files].map(f => {
+    const parts = (f.webkitRelativePath || f.name).split('/'); parts.pop();
+    return { file: f, dirs: parts };
+  }));
+  e.target.value = '';
+};
+
+/* ---------------- Events ---------------- */
+$('#list').addEventListener('click', e => {
+  const more = e.target.closest('[data-more]');
+  if (more) { e.stopPropagation(); return openMenu(view[+more.dataset.more], more); }
+  const row = e.target.closest('[data-i]');
+  if (row) openItem(view[+row.dataset.i]);
+});
+$('#list').addEventListener('contextmenu', e => {
+  const row = e.target.closest('[data-i]'); if (!row) return;
+  e.preventDefault(); openMenu(view[+row.dataset.i], row.querySelector('.more'));
+});
+$('#crumbs').addEventListener('click', e => {
+  const c = e.target.closest('[data-c]')?.dataset.c; if (c == null) return;
+  if (c === 'clear') { clearSearch(); return reload(); }
+  stack = stack.slice(0, +c + 1); reload();
+});
+let searchTimer;
+$('#search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { searchQ = e.target.value.trim(); reload(); }, 350);
+});
+$('#sort').value = cfg.sort;
+$('#sort').onchange = e => { cfg.sort = e.target.value; saveCfg(); renderList(); };
+$('#btnUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
+$('#btnNewFolder').onclick = newFolder;
+$('#btnAccounts').onclick = showAccounts;
+$('#space').onclick = showAccounts;
+$('#modal').addEventListener('click', e => {
+  if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal();
+  const rem = e.target.closest('[data-remove]'); if (rem) removeAccount(accounts[+rem.dataset.remove]);
+});
+document.addEventListener('click', e => {
+  const rc = e.target.closest('[data-recon]'); if (rc) reconnect(accBy(rc.dataset.recon));
+  if (!e.target.closest('#menu')) closeMenu();
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(); closeModal(); } });
+addEventListener('resize', closeMenu);
+addEventListener('scroll', closeMenu, true);
+addEventListener('beforeunload', e => { if (jobs.some(j => j.status === 'uploading' || j.status === 'waiting')) { e.preventDefault(); e.returnValue = ''; } });
+// re-check sign-in state every minute (tokens last ~1 hour)
+setInterval(() => { updateBanner(); if ($('#modal').dataset.view === 'accounts') showAccounts(); }, 60000);
+
+function toast(msg, err) {
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+  $('#toast').appendChild(t); setTimeout(() => t.remove(), err ? 5000 : 3000);
+}
+
+/* ---------------- Start ---------------- */
+renderSpace(); updateBanner(); reload();
+if (!cfg.clientId) showSetup();
+</script>
+</body>
+</html>
