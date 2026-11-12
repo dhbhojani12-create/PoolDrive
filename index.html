@@ -119,6 +119,23 @@ code,.code{background:var(--accent-soft);color:var(--accent);padding:1px 6px;bor
 .info-row span{word-break:break-all}
 .right{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 
+/* selection + move */
+.row .sel{flex:none;width:18px;height:18px;margin:0;accent-color:var(--accent);cursor:pointer;opacity:.3;transition:opacity .15s}
+.row:hover .sel,.row.selected .sel,.selecting .row .sel{opacity:1}
+@media (pointer:coarse){.row .sel{opacity:1;width:20px;height:20px}}
+.row.selected{background:var(--accent-soft)}
+.row.drop-on{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+.row.dragging{opacity:.45}
+.crumbs a.drop-on{background:var(--accent-soft);color:var(--accent);outline:2px dashed var(--accent)}
+.selbar{position:sticky;top:calc(var(--hh,64px) + 8px);z-index:15;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px 8px 16px;margin-bottom:10px;background:var(--accent);color:#fff;border-radius:12px;box-shadow:var(--shadow)}
+.selbar span{flex:1;font-weight:600;min-width:90px}
+.selbar button{background:rgba(255,255,255,.16);border-color:transparent;color:#fff;padding:6px 12px}
+.selbar button:hover{background:rgba(255,255,255,.28)}
+.picker-crumbs{font-size:15px;margin:6px 0 0}
+.picker-list{border:1px solid var(--line);border-radius:12px;height:min(48vh,380px);overflow:auto;margin:10px 0 0}
+.picker-list .row{padding:8px 12px}
+.picker-list .ic.folder svg{width:28px;height:28px}
+
 /* menu + toast */
 .menu{position:fixed;z-index:55;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;min-width:200px}
 .menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 12px;border-radius:8px}
@@ -171,6 +188,7 @@ code,.code{background:var(--accent-soft);color:var(--accent);padding:1px 6px;bor
       <button id="btnUpload" class="primary">Upload</button>
     </div>
   </div>
+  <div id="selbar" class="selbar hidden"></div>
   <div id="list"></div>
 </main>
 
@@ -381,6 +399,7 @@ function merge(groups) {
 let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
 
 async function reload() {
+  selected.clear();
   renderCrumbs();
   if (!cfg.clientId) return renderList();
   if (!accounts.length) { items = []; return renderList(); }
@@ -502,15 +521,165 @@ function renderList() {
     el.innerHTML = `<div class="list empty">${searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
       : `<h3>This folder is empty</h3><p>Drop files here or tap Upload.</p>`}</div>`; return;
   }
-  el.innerHTML = '<div class="list">' + view.map((it, i) => {
+  const drag = !isTouch;
+  el.innerHTML = `<div class="list${selected.size ? ' selecting' : ''}">` + view.map((it, i) => {
     const [t, label, color] = typeOf(it);
     const icon = t === 'folder' ? `<span class="ic folder">${FOLDER_SVG}</span>` : `<span class="ic" style="--c:${color}">${label}</span>`;
     const meta = it.kind === 'folder'
       ? ['Folder', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ')
       : [it.size ? fmt(+it.size) : (it.mimeType || '').startsWith('application/vnd.google-apps.') ? 'Google file' : '', fmtDate(it.modifiedTime)].filter(Boolean).join(' · ');
-    return `<div class="row" data-i="${i}">${icon}<div class="nm"><div class="t">${escH(it.name)}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
+    const on = selected.has(ikey(it));
+    return `<div class="row${on ? ' selected' : ''}" data-i="${i}"${drag ? ' draggable="true"' : ''}><input type="checkbox" class="sel" data-sel="${i}" ${on ? 'checked' : ''} title="Select">${icon}<div class="nm"><div class="t">${escH(it.name)}</div><div class="s">${escH(meta)}</div></div><button class="more" data-more="${i}" title="More">⋯</button></div>`;
   }).join('') + '</div>';
+  renderSelbar();
 }
+
+/* ---------------- Selection ---------------- */
+const selected = new Map();   // key -> item
+const ikey = it => it.kind === 'folder' ? 'd:' + it.refs.map(r => r.email + '/' + r.id).join(',') : 'f:' + it.email + '/' + it.id;
+function toggleSel(it) { const k = ikey(it); selected.has(k) ? selected.delete(k) : selected.set(k, it); renderList(); }
+function clearSel() { selected.clear(); renderList(); }
+function renderSelbar() {
+  const b = $('#selbar');
+  if (!selected.size) { b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  b.innerHTML = `<span>${selected.size} selected</span>
+    ${selected.size < view.length ? '<button data-sa="all">Select all</button>' : ''}
+    <button data-sa="move">Move to…</button><button data-sa="trash">Trash</button><button data-sa="clear" title="Clear selection">✕</button>`;
+}
+$('#selbar').addEventListener('click', e => {
+  const a = e.target.closest('[data-sa]')?.dataset.sa; if (!a) return;
+  const its = [...selected.values()];
+  if (a === 'all') { view.forEach(it => selected.set(ikey(it), it)); renderList(); }
+  else if (a === 'move') showMovePicker(its);
+  else if (a === 'trash') deleteItems(its);
+  else clearSel();
+});
+
+/* ---------------- Move ---------------- */
+const rootIds = new Map();
+async function rootIdOf(a) {
+  if (!rootIds.has(a.email)) rootIds.set(a.email, (await api(a, 'files/root?fields=id')).id);
+  return rootIds.get(a.email);
+}
+const samePath = (x, y) => x.length === y.length && x.every((n, i) => n === y[i]);
+const isInside = (target, src) => target.length >= src.length && src.every((n, i) => n === target[i]);
+
+// Moves files/folders into the merged folder at targetNames. Each item stays in its own account
+// (instant, no extra space); the target folder is created in that account if it only exists elsewhere.
+async function moveItems(its, targetNames) {
+  if (!searchQ) {
+    const here = curNames();
+    if (samePath(here, targetNames)) { toast('Already in this folder'); return; }
+    const bad = its.find(it => it.kind === 'folder' && isInside(targetNames, [...here, it.name]));
+    if (bad) { toast(`Can't move “${bad.name}” into itself`, true); return; }
+  }
+  const parts = its.flatMap(it => it.kind === 'folder'
+    ? it.refs.map(r => ({ email: r.email, id: r.id, name: it.name }))
+    : [{ email: it.email, id: it.id, parents: it.parents, name: it.name }]);
+  toast(`Moving ${its.length} item${its.length > 1 ? 's' : ''}…`);
+  const res = await Promise.allSettled(parts.map(async p => {
+    const a = accBy(p.email);
+    const target = targetNames.length ? await ensureFolderPath(a, targetNames) : await rootIdOf(a);
+    let parents = p.parents;
+    if (!parents) parents = (await api(a, `files/${p.id}?fields=parents`)).parents || [];
+    if (parents.includes(target) || p.id === target) return;
+    await api(a, `files/${p.id}?` + qs({ addParents: target, ...(parents.length ? { removeParents: parents.join(',') } : {}), fields: 'id' }), jsonOpts('PATCH', {}));
+  }));
+  const failed = res.filter(r => r.status === 'rejected');
+  failed.forEach(r => console.warn(r.reason));
+  if (failed.length) handleErr(failed[0].reason);
+  else toast(`Moved to ${targetNames.length ? targetNames[targetNames.length - 1] : 'All files'}`);
+  selected.clear(); fcache.clear(); reload();
+}
+
+let pstack = [];
+function showMovePicker(its) {
+  if (!its.length) return;
+  pstack = searchQ ? [{ name: 'All files', refs: null }] : stack.map(s => ({ ...s }));
+  showModal(`<h2>Move ${its.length === 1 ? '“' + escH(its[0].name) + '”' : its.length + ' items'}</h2>
+    <p class="sub" style="margin:0">Pick a folder, then tap <b>Move here</b>.</p>
+    <nav class="crumbs picker-crumbs" id="pCrumbs"></nav>
+    <div class="picker-list" id="pList"></div>
+    <div class="right" style="justify-content:space-between">
+      <button id="pNew">+ New folder</button>
+      <span style="display:flex;gap:8px"><button data-close>Cancel</button><button class="primary" id="pMove">Move here</button></span>
+    </div>`, 'move');
+  const pNames = () => pstack.slice(1).map(s => s.name);
+  const blocked = () => {
+    const t = pNames();
+    if (!searchQ && samePath(t, curNames())) return 'Already here';
+    if (!searchQ && its.some(it => it.kind === 'folder' && isInside(t, [...curNames(), it.name]))) return "Can't move a folder into itself";
+    return '';
+  };
+  let folders = [];
+  const draw = async () => {
+    $('#pCrumbs').innerHTML = pstack.map((s, i) => `<a data-pc="${i}">${escH(s.name)}</a>`).join('<span class="sep">›</span>');
+    const why = blocked(); const mv = $('#pMove');
+    mv.disabled = !!why; mv.title = why; mv.textContent = why || 'Move here';
+    const list = $('#pList'); list.innerHTML = '<div class="spinner"></div>';
+    const loc = pstack[pstack.length - 1], refs = locRefs(loc), names = pNames();
+    refs.forEach(r => seed(r.email, names, r.id));
+    const res = await Promise.allSettled(refs.map(async r => ({
+      email: r.email,
+      items: (await api(accBy(r.email), 'files?' + qs({ q: `'${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id,name,mimeType,modifiedTime)', pageSize: 1000 }))).files
+    })));
+    if (!$('#pList')) return;
+    folders = merge(res.filter(x => x.status === 'fulfilled').map(x => x.value))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    list.innerHTML = folders.length
+      ? folders.map((f, i) => `<div class="row" data-pf="${i}"><span class="ic folder">${FOLDER_SVG}</span><div class="nm"><div class="t">${escH(f.name)}</div></div><span class="st">›</span></div>`).join('')
+      : '<div class="empty" style="padding:40px 10px">No folders here. You can move into this folder or create a new one.</div>';
+  };
+  $('#pList').onclick = e => { const r = e.target.closest('[data-pf]'); if (r) { const f = folders[+r.dataset.pf]; pstack.push({ name: f.name, refs: f.refs }); draw(); } };
+  $('#pCrumbs').onclick = e => { const c = e.target.closest('[data-pc]'); if (c) { pstack = pstack.slice(0, +c.dataset.pc + 1); draw(); } };
+  $('#pNew').onclick = async () => {
+    const n = prompt('New folder name'); if (!n || !n.trim()) return;
+    const refs = locRefs(pstack[pstack.length - 1]).map(r => accBy(r.email));
+    const a = (refs.length ? refs : live()).slice().sort((x, y) => freeOf(y) - freeOf(x))[0];
+    if (!a) return toast('Reconnect an account first', true);
+    try { await ensureFolderPath(a, [...pNames(), n.trim()]); draw(); } catch (e) { handleErr(e); }
+  };
+  $('#pMove').onclick = () => { const t = pNames(); $('#modal').dataset.locked = ''; closeModal(); moveItems(its, t); };
+  draw();
+}
+
+/* drag rows onto folders or breadcrumbs (desktop) */
+let dragItems = null;
+const PD_TYPE = 'application/x-pooldrive';
+$('#list').addEventListener('dragstart', e => {
+  const row = e.target.closest('[data-i]'); if (!row) return;
+  const it = view[+row.dataset.i];
+  dragItems = selected.has(ikey(it)) ? [...selected.values()] : [it];
+  e.dataTransfer.setData(PD_TYPE, '1'); e.dataTransfer.effectAllowed = 'move';
+  const lbl = dragItems.length > 1 ? `${dragItems.length} items` : it.name;
+  const ghost = document.createElement('div');
+  ghost.textContent = lbl; ghost.style.cssText = 'position:absolute;top:-999px;padding:6px 12px;border-radius:8px;background:#4f46e5;color:#fff;font:600 13px system-ui';
+  document.body.appendChild(ghost); e.dataTransfer.setDragImage(ghost, 10, 10); setTimeout(() => ghost.remove());
+  requestAnimationFrame(() => document.querySelectorAll('.row').forEach(r => { if (dragItems.includes(view[+r.dataset.i])) r.classList.add('dragging'); }));
+});
+$('#list').addEventListener('dragend', () => { dragItems = null; document.querySelectorAll('.dragging,.drop-on').forEach(x => x.classList.remove('dragging', 'drop-on')); });
+function dropTarget(e) {
+  if (!dragItems || searchQ) return null;
+  const row = e.target.closest('#list [data-i]');
+  if (row) { const it = view[+row.dataset.i]; if (it.kind === 'folder' && !dragItems.includes(it)) return { el: row, names: [...curNames(), it.name] }; return null; }
+  const c = e.target.closest('#crumbs [data-c]');
+  if (c && c.dataset.c !== 'clear' && +c.dataset.c < stack.length - 1) return { el: c, names: stack.slice(1, +c.dataset.c + 1).map(s => s.name) };
+  return null;
+}
+document.addEventListener('dragover', e => {
+  if (!dragItems) return;
+  document.querySelectorAll('.drop-on').forEach(x => x.classList.remove('drop-on'));
+  const t = dropTarget(e); if (!t) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move'; t.el.classList.add('drop-on');
+});
+document.addEventListener('drop', e => {
+  if (!dragItems) return;
+  const t = dropTarget(e); const its = dragItems; dragItems = null;
+  document.querySelectorAll('.drop-on,.dragging').forEach(x => x.classList.remove('drop-on', 'dragging'));
+  if (!t) return;
+  e.preventDefault(); moveItems(its, t.names);
+});
 
 function renderSpace() {
   const all = accounts;
@@ -669,15 +838,19 @@ async function renameItem(it) {
   } catch (e) { handleErr(e); }
 }
 
-async function deleteItem(it) {
-  const many = it.kind === 'folder' && it.refs.length > 1;
-  if (!confirm(`Move “${it.name}” to trash?${many ? `\n\nThis folder exists in ${it.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore it from Google Drive's Trash for 30 days.`)) return;
+async function deleteItems(its) {
+  if (!its.length) return;
+  const one = its.length === 1 ? its[0] : null;
+  const many = one && one.kind === 'folder' && one.refs.length > 1;
+  const what = one ? `“${one.name}”` : `${its.length} items`;
+  if (!confirm(`Move ${what} to trash?${many ? `\n\nThis folder exists in ${one.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore from Google Drive's Trash for 30 days.`)) return;
   try {
-    const targets = it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }];
+    const targets = its.flatMap(it => it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }]);
     await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
-    fcache.clear(); toast('Moved to trash (it still uses space until the trash is emptied)'); reload();
+    selected.clear(); fcache.clear(); toast('Moved to trash (it still uses space until the trash is emptied)'); reload();
   } catch (e) { handleErr(e); }
 }
+const deleteItem = it => deleteItems([it]);
 
 async function newFolder() {
   if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
@@ -694,8 +867,8 @@ async function newFolder() {
 function openMenu(it, anchor) {
   const m = $('#menu');
   const acts = it.kind === 'folder'
-    ? [['open', 'Open'], ['rename', 'Rename'], ['info', 'Details'], '-', ['delete', 'Move to trash']]
-    : [['open', 'Open'], ['download', 'Download'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
+    ? [['open', 'Open'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], '-', ['delete', 'Move to trash']]
+    : [['open', 'Open'], ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
   m.innerHTML = acts.map(a => a === '-' ? '<hr>' : `<button data-act="${a[0]}" class="${a[0] === 'delete' ? 'danger' : ''}">${a[1]}</button>`).join('');
   m.classList.remove('hidden');
   const r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
@@ -704,7 +877,7 @@ function openMenu(it, anchor) {
   m.onclick = e => {
     const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
     closeMenu();
-    ({ open: () => openItem(it), download: () => downloadFile(it), rename: () => renameItem(it), info: () => showInfo(it),
+    ({ open: () => openItem(it), download: () => downloadFile(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
        locate: () => goToLocation(it), drive: () => window.open(driveLink(it), '_blank', 'noopener'), delete: () => deleteItem(it) })[act]();
   };
 }
@@ -923,10 +1096,14 @@ $('#folderInput').onchange = e => {
 
 /* ---------------- Events ---------------- */
 $('#list').addEventListener('click', e => {
+  const sel = e.target.closest('[data-sel]');
+  if (sel) { e.stopPropagation(); return toggleSel(view[+sel.dataset.sel]); }
   const more = e.target.closest('[data-more]');
   if (more) { e.stopPropagation(); return openMenu(view[+more.dataset.more], more); }
   const row = e.target.closest('[data-i]');
-  if (row) openItem(view[+row.dataset.i]);
+  if (!row) return;
+  if (selected.size) return toggleSel(view[+row.dataset.i]);   // while selecting, a tap selects
+  openItem(view[+row.dataset.i]);
 });
 $('#list').addEventListener('contextmenu', e => {
   const row = e.target.closest('[data-i]'); if (!row) return;
@@ -956,7 +1133,7 @@ document.addEventListener('click', e => {
   const rc = e.target.closest('[data-recon]'); if (rc) reconnect(accBy(rc.dataset.recon));
   if (!e.target.closest('#menu')) closeMenu();
 });
-addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(); closeModal(); } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenu(); if (!$('#modal').classList.contains('hidden')) closeModal(); else if (selected.size) clearSel(); } });
 addEventListener('resize', closeMenu);
 addEventListener('scroll', closeMenu, true);
 addEventListener('beforeunload', e => { if (jobs.some(j => j.status === 'uploading' || j.status === 'waiting')) { e.preventDefault(); e.returnValue = ''; } });
@@ -969,6 +1146,8 @@ function toast(msg, err) {
 }
 
 /* ---------------- Start ---------------- */
+const setHH = () => document.documentElement.style.setProperty('--hh', $('.top').offsetHeight + 'px');
+setHH(); addEventListener('resize', setHH);
 renderSpace(); updateBanner(); reload();
 if (!cfg.clientId) showSetup();
 </script>
