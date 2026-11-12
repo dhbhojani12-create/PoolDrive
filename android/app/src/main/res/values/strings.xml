@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PoolDrive</string>
+    <string name="launchUrl">https://dhbhojani12-create.github.io/PoolDrive/</string>
+    <string name="asset_statements">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://dhbhojani12-create.github.io\" } }]</string>
+    <string name="shareTarget">{\"action\": \"https://dhbhojani12-create.github.io/PoolDrive/share\", \"method\": \"POST\", \"enctype\": \"multipart/form-data\", \"params\": { \"title\": \"title\", \"text\": \"text\", \"url\": \"url\", \"files\": [{ \"name\": \"files\", \"accept\": [\"*/*\"] }] } }</string>
+</resources>

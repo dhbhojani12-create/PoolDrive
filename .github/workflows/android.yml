@@ -1,0 +1,43 @@
+# Builds the PoolDrive Android app (a Trusted Web Activity that opens the PoolDrive website full screen)
+# and saves it to app/PoolDrive.apk, so it can be downloaded from the PoolDrive site.
+name: Build Android app
+on:
+  workflow_dispatch:
+  push:
+    paths: ['android/**', '.github/workflows/android.yml']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.7' }
+      - name: Signing key
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS_SECRET: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/pd.jks"; echo "KS_PASS=$KS_PASS_SECRET" >> $GITHUB_ENV; echo "KEY_KIND=saved" >> $GITHUB_ENV
+          else
+            P=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore "$RUNNER_TEMP/pd.jks" -alias pooldrive -keyalg RSA -keysize 2048 -validity 10000 -storepass "$P" -keypass "$P" -dname "CN=PoolDrive"
+            echo "KS_PASS=$P" >> $GITHUB_ENV; echo "KEY_KIND=new" >> $GITHUB_ENV
+          fi
+          echo "KS_FILE=$RUNNER_TEMP/pd.jks" >> $GITHUB_ENV
+          echo "VERSION_CODE=${{ github.run_number }}" >> $GITHUB_ENV
+      - name: Build
+        working-directory: android
+        run: gradle --no-daemon assembleRelease
+      - name: Save the app into the site
+        run: |
+          mkdir -p app
+          cp android/app/build/outputs/apk/release/app-release.apk app/PoolDrive.apk
+          FP=$(keytool -list -v -keystore "$KS_FILE" -storepass "$KS_PASS" -alias pooldrive | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+          printf '{"version":"1.0.%s","built":"%s","key":"%s","sha256":"%s"}\n' "$VERSION_CODE" "$(date -u +%FT%TZ)" "$KEY_KIND" "$FP" > app/build-info.json
+          git config user.name "PoolDrive build"; git config user.email "actions@users.noreply.github.com"
+          git add app && git commit -m "Android app 1.0.$VERSION_CODE [skip ci]" && git push
