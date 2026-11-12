@@ -680,19 +680,42 @@ async function pathOf(a, id) {
   return names;
 }
 // Walk the merged tree by names so the folder shows its content from every account.
-async function navigateNames(names) {
-  clearSearch(); stack = [stack[0]];
-  if (mode !== 'files') { mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); }
+// Build the merged folder path (same-name folders in every account) for these names.
+async function mergedStack(names) {
+  const st = [{ name: 'All files', refs: null }];
   for (const n of names) {
-    const refs = locRefs(stack[stack.length - 1]); const found = [];
+    const refs = locRefs(st[st.length - 1]); const found = [];
     await Promise.allSettled(refs.map(async r => {
       const q = await api(accBy(r.email), 'files?' + qs({ q: `name='${escQ(n)}' and '${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id,appProperties)' }));
       q.files.forEach(f => found.push({ email: r.email, id: f.id, locked: isLockedF(f) }));
     }));
     if (!found.length) break;
-    stack.push({ name: n, refs: found.map(({ email, id }) => ({ email, id })), locked: found.some(f => f.locked) });
+    st.push({ name: n, refs: found.map(({ email, id }) => ({ email, id })), locked: found.some(f => f.locked) });
   }
-  reload();
+  return st;
+}
+function toFilesMode() {
+  clearSearch();
+  if (mode !== 'files') { mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); }
+}
+async function navigateNames(names) {
+  toFilesMode(); stack = [stack[0]];
+  loading = true; renderCrumbs(); renderList();          // instant feedback while the path is looked up
+  stack = await mergedStack(names);
+  loading = false; reload();
+}
+// Open a folder found by the Analysis scan: show it straight away from what the scan knows,
+// then quietly add the same-name folders from the other accounts.
+function openScannedFolder(f) {
+  const levels = [...(f.pathChain || []), { name: f.name, id: f.id, locked: !!f.locked }];
+  toFilesMode();
+  stack = [{ name: 'All files', refs: null }, ...levels.map(l => ({ name: l.name, refs: [{ email: f.email, id: l.id }], locked: !!l.locked }))];
+  const fast = stack;
+  reload(); window.scrollTo(0, 0);
+  mergedStack(levels.map(l => l.name)).then(st => {
+    if (stack !== fast || mode !== 'files' || searchQ) return;            // user moved on: leave it
+    if (st.length === fast.length && st.some((x, i) => i && (x.refs.length > fast[i].refs.length || x.locked !== fast[i].locked))) { stack = st; reload(); }
+  }).catch(() => {});
 }
 async function goToLocation(it) {
   const a = accBy(it.email);
@@ -1115,13 +1138,13 @@ async function runScan() {
     const k = email + '/' + id;
     if (pathMemo.has(k)) return pathMemo.get(k);
     const f = folders.get(k); let out = [];
-    if (f) out = [...((f.parents || [])[0] ? chain(email, f.parents[0]) : []), { name: f.name, locked: isLockedF(f) }];
+    if (f) out = [...((f.parents || [])[0] ? chain(email, f.parents[0]) : []), { name: f.name, id: f.id, locked: isLockedF(f) }];
     pathMemo.set(k, out); return out;
   };
   const enrich = f => {
     const c = (f.parents || [])[0] ? chain(f.email, f.parents[0]) : [];
     const lockedUp = [...c].reverse().find(x => x.locked);
-    return { ...f, kind: f.mimeType === FOLDER ? 'folder' : 'file', pathNames: c.map(x => x.name), path: c.map(x => x.name).join(' › ') || 'All files',
+    return { ...f, kind: f.mimeType === FOLDER ? 'folder' : 'file', pathNames: c.map(x => x.name), pathChain: c, path: c.map(x => x.name).join(' › ') || 'All files',
              lockedAboveName: lockedUp ? lockedUp.name : '' };
   };
 
@@ -1263,7 +1286,7 @@ $('#list').addEventListener('click', e => {
   const op = t.closest('[data-aopen]');
   if (op) {
     const f = anaList()[+op.dataset.aopen]; if (!f) return;
-    if (f.kind === 'folder') return navigateNames([...(f.pathNames || []), f.name]);   // open the folder here in PoolDrive
+    if (f.kind === 'folder') return openScannedFolder(f);   // open the folder here in PoolDrive, instantly
     return openFile(f);
   }
   const dg = t.closest('[data-adup]'); if (dg) { const g = scan.dups[+dg.dataset.adup]; if (g) anaTrash(g.items.slice(1)); return; }
