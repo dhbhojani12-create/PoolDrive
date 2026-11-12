@@ -615,7 +615,7 @@ const isInside = (target, src) => target.length >= src.length && src.every((n, i
 // Moves files/folders into the merged folder at targetNames. Each item stays in its own account
 // (instant, no extra space); the target folder is created in that account if it only exists elsewhere.
 async function moveItems(its, targetNames) {
-  { const why = await protectReason(its, 'move'); if (why) return toast(why, true); }
+  { const why = await protectReason(its); if (why) return toast(why, true); }
   if (!searchQ) {
     const here = curNames();
     if (samePath(here, targetNames)) { toast('Already in this folder'); return; }
@@ -893,17 +893,15 @@ async function lockedAncestor(it) {           // name of a locked folder above t
   }
   return '';
 }
-async function protectReason(its, action) {
+// Locked folder itself: blocked. Returns a reason string, or ''.
+async function protectReason(its) {
   const lockedSelf = its.find(it => it.kind === 'folder' && it.locked);
-  if (lockedSelf) return `“${lockedSelf.name}” is locked. Unlock it first (⋯ → Unlock folder).`;
-  if (action !== 'delete') return '';
-  if (!searchQ) {
-    const up = stack.find(s => s.locked);
-    return up ? `This is inside the locked folder “${up.name}”. Unlock it first to delete things here.` : '';
-  }
-  for (const it of its) {
-    try { const n = await lockedAncestor(it); if (n) return `“${it.name}” is inside the locked folder “${n}”. Unlock it first.`; } catch {}
-  }
+  return lockedSelf ? `“${lockedSelf.name}” is locked. Unlock it first (⋯ → Unlock folder).` : '';
+}
+// Name of the locked folder these items sit inside (deleting them needs an extra confirmation), or ''.
+async function insideLocked(its) {
+  if (!searchQ) return stack.find(s => s.locked)?.name || '';
+  for (const it of its) { try { const n = await lockedAncestor(it); if (n) return n; } catch {} }
   return '';
 }
 async function setLock(it, on) {
@@ -918,7 +916,7 @@ async function setLock(it, on) {
 }
 
 async function renameItem(it) {
-  { const why = await protectReason([it], 'rename'); if (why) return toast(why, true); }
+  { const why = await protectReason([it]); if (why) return toast(why, true); }
   const n = prompt('Rename to', it.name);
   if (!n || !n.trim() || n === it.name) return;
   try {
@@ -930,11 +928,15 @@ async function renameItem(it) {
 
 async function deleteItems(its) {
   if (!its.length) return;
-  { const why = await protectReason(its, 'delete'); if (why) return toast(why, true); }
+  { const why = await protectReason(its); if (why) return toast(why, true); }
   const one = its.length === 1 ? its[0] : null;
   const many = one && one.kind === 'folder' && one.refs.length > 1;
   const what = one ? `“${one.name}”` : `${its.length} items`;
-  if (!confirm(`Move ${what} to trash?${many ? `\n\nThis folder exists in ${one.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore from Google Drive's Trash for 30 days.`)) return;
+  const lockName = await insideLocked(its);
+  const msg = lockName
+    ? `🔒 ${what} ${one ? 'is' : 'are'} inside the LOCKED folder “${lockName}”.\n\nAre you sure you want to move ${one ? 'it' : 'them'} to trash?`
+    : `Move ${what} to trash?`;
+  if (!confirm(`${msg}${many ? `\n\nThis folder exists in ${one.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore from Google Drive's Trash for 30 days.`)) return;
   try {
     const targets = its.flatMap(it => it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }]);
     await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
