@@ -339,6 +339,13 @@ body[data-mode="photos"] .vtoggle,body[data-mode="photos"] .actions,body[data-mo
 .m-dot{width:9px;height:9px;border-radius:50%;flex:none}
 .sh-exp{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:13px;color:var(--muted)}.sh-exp select{border-radius:10px;border:1px solid var(--line);background:var(--card);padding:6px 8px}
 .sh-until{color:#b45309;font-weight:600}
+.ph-selbtn{margin-left:auto;font-size:13.5px;font-weight:600}.ph-sharealb+.ph-selbtn{margin-left:0}
+.ph-t .ck{position:absolute;top:6px;left:6px;z-index:2;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.25);display:grid;place-items:center;color:#fff}
+.ph-t.sel .ck{background:var(--accent);border-color:var(--accent)}.ph-t.sel img{transform:scale(.86);border-radius:8px}.ph-t img{transition:transform .12s}
+.ph-t{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ph-selbar{position:fixed;left:50%;transform:translateX(-50%);width:max-content;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;padding:8px 10px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 20px);flex-wrap:wrap;justify-content:center}
+.ph-selbar b{padding:0 6px;font-size:14px;white-space:nowrap}@media (max-width:760px){.ph-selbar{left:10px;right:10px;transform:none;width:auto;flex-wrap:nowrap;justify-content:space-between;gap:6px}.ph-selbar button{padding:8px 10px}}.ph-selbar button{display:flex;align-items:center;gap:6px;font-size:13.5px}.ph-selbar .danger{color:#fff;background:var(--danger);border-color:var(--danger)}
+body.phsel .fab{display:none}.ph{padding-bottom:90px}
 </style>
 </head>
 <body>
@@ -714,7 +721,7 @@ let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
 let mode = 'files';   // files | photos | recent | locked | analysis
 function setMode(m) {
   if (m === 'trash') return trashMenu();
-  mode = m;
+  mode = m; document.body.classList.remove('phsel');
   if (m !== 'files') clearSearch();
   document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === mode));
   reload(); window.scrollTo(0, 0);
@@ -2131,7 +2138,7 @@ async function shareLinkDialog(it) {
 /* ---------------- Photos ----------------
    Every photo and video in all accounts, newest first, grouped by month.
    Albums are folders inside a top-level "Photos" folder (merged across accounts). */
-const PH = { items: [], toks: {}, more: false, loading: false, filter: 'all', album: null, albums: null, seq: 0 };
+const PH = { items: [], toks: {}, more: false, loading: false, filter: 'all', album: null, albums: null, seq: 0, sel: new Set(), selMode: false };
 const PH_FIELDS = 'id,name,mimeType,size,modifiedTime,createdTime,thumbnailLink,imageMediaMetadata(time),videoMediaMetadata(durationMillis),parents,webViewLink';
 const phDate = f => { const t = f.imageMediaMetadata && f.imageMediaMetadata.time; if (t && /^\d{4}:\d\d:\d\d/.test(t)) return t.slice(0, 10).replace(/:/g, '-') + 'T' + (t.slice(11) || '00:00:00'); return f.createdTime || f.modifiedTime || ''; };
 const phThumb = (f, s) => f.thumbnailLink ? f.thumbnailLink.replace(/=s\d+(-[a-z0-9-]+)?$/i, '') + '=s' + s : '';
@@ -2145,7 +2152,7 @@ function phQuery(email) {
 }
 async function loadPhotos(more) {
   const seq = more ? PH.seq : ++PH.seq;
-  if (!more) { PH.items = []; PH.toks = {}; PH.loading = true; renderPhotos(); if (!PH.album) loadAlbums(); }
+  if (!more) { PH.items = []; PH.toks = {}; PH.loading = true; PH.sel.clear(); PH.selMode = false; renderPhotos(); if (!PH.album) loadAlbums(); }
   const accs = live().filter(a => !more || PH.toks[a.email]);
   const res = await Promise.allSettled(accs.map(async a => {
     const q = phQuery(a.email); if (!q) return [];
@@ -2180,7 +2187,7 @@ const PH_IC = {
   plus: '<path d="M12 5v14M5 12h14"/>', back: '<path d="M15 18l-6-6 6-6"/>', play: '<path d="M8 5v14l11-7z" fill="currentColor"/>',
   share: '<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>', download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   album: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
-  prev: '<path d="M15 18l-6-6 6-6"/>', next: '<path d="M9 18l6-6-6-6"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+  prev: '<path d="M15 18l-6-6 6-6"/>', check: '<path d="M5 12l5 5 9-10"/>', next: '<path d="M9 18l6-6-6-6"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
 };
 const phI = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PH_IC[k]}</svg>`;
 function renderPhotos() {
@@ -2188,8 +2195,8 @@ function renderPhotos() {
   const el = $('#list');
   const chip = (k, t) => `<button class="ph-chip${PH.filter === k ? ' on' : ''}" data-phf="${k}">${t}</button>`;
   let h = '<div class="ph">';
-  if (PH.album) h += `<div class="ph-head"><button class="ph-back" data-phback aria-label="All photos">${phI('back')}</button><div><h2>${escH(PH.album.name)}</h2><small>Album · ${PH.loading ? '…' : PH.items.length + (PH.more ? '+' : '') + ' items'}</small></div><button class="ph-sharealb" data-phsharealb>${phI('link', 16)}Share album</button></div>`;
-  else h += `<div class="ph-head"><div><h2>Photos</h2><small>${PH.loading ? 'Loading…' : PH.items.length + (PH.more ? '+' : '') + ' photos and videos from all accounts'}</small></div></div>`;
+  if (PH.album) h += `<div class="ph-head"><button class="ph-back" data-phback aria-label="All photos">${phI('back')}</button><div><h2>${escH(PH.album.name)}</h2><small>Album · ${PH.loading ? '…' : PH.items.length + (PH.more ? '+' : '') + ' items'}</small></div><button class="ph-sharealb" data-phsharealb>${phI('link', 16)}Share album</button><button class="ph-selbtn" data-phsel>${PH.selMode ? 'Cancel' : 'Select'}</button></div>`;
+  else h += `<div class="ph-head"><div><h2>Photos</h2><small>${PH.loading ? 'Loading…' : PH.items.length + (PH.more ? '+' : '') + ' photos and videos from all accounts'}</small></div><button class="ph-selbtn" data-phsel>${PH.selMode ? 'Cancel' : 'Select'}</button></div>`;
   h += `<div class="ph-chips">${chip('all', 'All')}${chip('videos', 'Videos')}${chip('shots', 'Screenshots')}</div>`;
   if (!PH.album) {
     h += '<div class="ph-sec">Albums</div><div class="ph-albums"><button class="ph-alb new" data-phnew><span class="cov">' + phI('plus', 28) + '</span><b>New album</b><small>Name it, pick photos</small></button>';
@@ -2205,16 +2212,29 @@ function renderPhotos() {
       const d = phDate(f), mk = d.slice(0, 7);
       if (mk !== cur) { if (cur) h += '</div>'; cur = mk; const dt = new Date(mk + '-01T00:00:00'); h += `<div class="ph-sec">${isNaN(dt) ? 'Undated' : dt.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div><div class="ph-grid">`; }
       const t = phThumb(f, 400);
-      h += `<button class="ph-t" data-phi="${i}" aria-label="${escH(f.name)}">${t ? `<img loading="lazy" src="${escH(t)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<span class="nm">${escH(f.name)}</span>${isVid(f) ? `<span class="vid">${phI('play', 14)}</span>` : ''}</button>`;
+      h += `<button class="ph-t${PH.sel.has(f.id) ? ' sel' : ''}" data-phi="${i}" aria-label="${escH(f.name)}"${PH.selMode ? ` aria-pressed="${PH.sel.has(f.id)}"` : ''}>${PH.selMode ? `<span class="ck">${PH.sel.has(f.id) ? phI('check', 14) : ''}</span>` : ''}${t ? `<img loading="lazy" src="${escH(t)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<span class="nm">${escH(f.name)}</span>${isVid(f) ? `<span class="vid">${phI('play', 14)}</span>` : ''}</button>`;
     });
     if (cur) h += '</div>';
     if (PH.more) h += '<div style="text-align:center;margin:18px 0"><button data-phmore>Show more</button></div>';
   }
+  if (PH.selMode) h += `<div class="ph-selbar"><b>${PH.sel.size} selected</b><button data-phall>${PH.sel.size && PH.sel.size === PH.items.length ? 'Select none' : 'Select all'}</button><button data-phmv${PH.sel.size ? '' : ' disabled'}>${phI('album', 18)}Move</button><button class="danger" data-phdel${PH.sel.size ? '' : ' disabled'}>${phI('trash', 18)}Delete</button></div>`;
+  document.body.classList.toggle('phsel', PH.selMode);
   el.innerHTML = h + '</div>';
 }
 $('#list').addEventListener('click', e => {
   if (mode !== 'photos' || searchQ) return;
-  const b = e.target.closest('[data-phf],[data-phback],[data-phnew],[data-pha],[data-phi],[data-phmore],[data-phsharealb]'); if (!b) return;
+  const b = e.target.closest('[data-phf],[data-phback],[data-phnew],[data-pha],[data-phi],[data-phmore],[data-phsharealb],[data-phsel],[data-phall],[data-phmv],[data-phdel]'); if (!b) return;
+  if (b.hasAttribute('data-phsel')) { PH.selMode = !PH.selMode; PH.sel.clear(); return renderPhotos(); }
+  if (b.hasAttribute('data-phall')) { if (PH.sel.size === PH.items.length) PH.sel.clear(); else PH.items.forEach(f => PH.sel.add(f.id)); return renderPhotos(); }
+  if (b.hasAttribute('data-phdel')) { const its = PH.items.filter(f => PH.sel.has(f.id)); deleteItems(its); return; }
+  if (b.hasAttribute('data-phmv')) {
+    const its = PH.items.filter(f => PH.sel.has(f.id)), names = (PH.albums || []).map(a => a.name);
+    const pick = prompt(`Move ${its.length} item${its.length > 1 ? 's' : ''} to which album?` + (names.length ? '\n\nYour albums: ' + names.join(', ') : '') + '\n\nType a name (a new one is created if needed):', names[0] || '');
+    if (pick && pick.trim()) moveItems(its, ['Photos', pick.trim().replace(/[\\/]/g, '-')]).then(() => { PH.albums = null; loadAlbums(); });
+    return;
+  }
+  if (phLong) { phLong = false; return; }   // the click that ends a press-and-hold
+  if (b.dataset.phi && PH.selMode) { const f = PH.items[+b.dataset.phi]; if (!f) return; if (!PH.selMode) PH.selMode = true; PH.sel.has(f.id) ? PH.sel.delete(f.id) : PH.sel.add(f.id); return renderPhotos(); }
   if (b.dataset.phf) { PH.filter = b.dataset.phf; loadPhotos(); }
   else if (b.hasAttribute('data-phback')) { PH.album = null; loadPhotos(); }
   else if (b.hasAttribute('data-phnew')) newAlbum();
@@ -2223,6 +2243,11 @@ $('#list').addEventListener('click', e => {
   else if (b.hasAttribute('data-phmore')) loadPhotos(true);
   else if (b.hasAttribute('data-phsharealb')) shareLinkDialog(PH.album);
 });
+// press and hold a photo to start selecting
+let phLong = false, phLT = 0;
+$('#list').addEventListener('pointerdown', e => { if (mode !== 'photos') return; phLong = false; if (PH.selMode) return; const t = e.target.closest('[data-phi]'); if (!t) return; clearTimeout(phLT); phLT = setTimeout(() => { const f = PH.items[+t.dataset.phi]; if (!f) return; phLong = true; if (navigator.vibrate) navigator.vibrate(20); PH.selMode = true; PH.sel.add(f.id); renderPhotos(); }, 450); });
+['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach(ev => $('#list').addEventListener(ev, () => clearTimeout(phLT), true));
+$('#list').addEventListener('contextmenu', e => { if (mode === 'photos' && e.target.closest('[data-phi]')) e.preventDefault(); });
 // pick photos, then upload them into Photos (or an album inside it)
 let phTarget = ['Photos'];
 const phInput = document.createElement('input'); phInput.type = 'file'; phInput.multiple = true; phInput.accept = 'image/*,video/*'; phInput.hidden = true; document.body.appendChild(phInput);
