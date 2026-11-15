@@ -332,6 +332,13 @@ body[data-mode="photos"] .vtoggle,body[data-mode="photos"] .actions,body[data-mo
 .sv h1{margin:16px 0 4px;font-size:26px}.sv-sub{color:var(--muted);margin:0 0 16px;font-size:14px}
 .sv-part{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid var(--line)}.sv-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}.sv-h a{color:var(--accent);font-weight:600;text-decoration:none}
 .sv iframe{display:block;width:100%;height:70vh;border:0;background:#fff}
+.menu .m-lbl{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 12px 2px}
+.menu hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.menu button[data-ua]{display:flex;align-items:center;gap:8px}.menu button[data-ua] small{margin-left:auto;color:var(--muted);font-size:12px}
+.menu button[data-ua].on{background:var(--accent-soft);color:var(--accent);font-weight:600}.menu button[data-ua].on::after{content:"✓";margin-left:6px}
+.m-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.sh-exp{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:13px;color:var(--muted)}.sh-exp select{border-radius:10px;border:1px solid var(--line);background:var(--card);padding:6px 8px}
+.sh-until{color:#b45309;font-weight:600}
 </style>
 </head>
 <body>
@@ -1630,12 +1637,16 @@ function closeMenu() { $('#menu').classList.add('hidden'); }
 
 function uploadMenu(anchor) {
   const m = $('#menu');
-  m.innerHTML = '<button data-u="files">📄 Upload files</button><button data-u="folder">📁 Upload a folder</button>';
+  const accs = live();
+  m.innerHTML = '<button data-u="files">📄 Upload files</button><button data-u="folder">📁 Upload a folder</button>' +
+    (accs.length > 1 ? '<hr><div class="m-lbl">Upload to</div><button data-ua="" class="' + (uploadTo ? '' : 'on') + '">✨ Smart (best account)</button>' +
+      accs.map(a => `<button data-ua="${escH(a.email)}" class="${uploadTo === a.email ? 'on' : ''}"><span class="m-dot" style="background:${accColor(a)}"></span>${escH(a.email.split('@')[0])}<small>${fmt(freeOf(a))} free</small></button>`).join('') : '');
   m.classList.remove('hidden');
   const r = anchor.getBoundingClientRect();
   m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + 'px';
   m.style.top = (r.bottom + m.offsetHeight + 8 > innerHeight ? Math.max(8, r.top - m.offsetHeight - 6) : r.bottom + 4) + 'px';
   m.onclick = e => {
+    const ua = e.target.closest('[data-ua]'); if (ua) { uploadTo = ua.dataset.ua; m.querySelectorAll('[data-ua]').forEach(b => b.classList.toggle('on', b === ua)); return; }
     const u = e.target.closest('[data-u]')?.dataset.u; if (!u) return;
     closeMenu(); (u === 'files' ? $('#fileInput') : $('#folderInput')).click();
   };
@@ -1645,9 +1656,12 @@ function uploadMenu(anchor) {
 let jobs = [], jobSeq = 0, running = 0, panelOpen = true;
 
 // Decide which account gets each file. Folders stay in one account when they fit.
+let uploadTo = '';   // '' = smart; else the email of the account the next upload goes to
 function planUpload(entries) {
   const base = curNames();
-  const accs = live();
+  const forced = uploadTo && live().find(a => a.email === uploadTo);
+  uploadTo = '';
+  const accs = forced ? [forced] : live();
   const free = new Map(accs.map(a => [a.email, freeOf(a)]));
   const here = new Set(locRefs(stack[stack.length - 1]).map(r => r.email));
   const size = u => u.reduce((s, e) => s + e.file.size, 0);
@@ -1661,7 +1675,7 @@ function planUpload(entries) {
   const pick = need => {
     let c = accs.filter(a => free.get(a.email) >= need + MARGIN);
     if (!c.length) return null;
-    if (cfg.keepTogether) { const p = c.filter(a => here.has(a.email)); if (p.length) c = p; }
+    if (cfg.keepTogether && !forced) { const p = c.filter(a => here.has(a.email)); if (p.length) c = p; }
     return c.sort((a, b) => free.get(b.email) - free.get(a.email))[0];
   };
   const planned = [], tooBig = [];
@@ -2003,16 +2017,43 @@ function toast(msg, err) {
 /* ---------------- Share link (folders, albums and files) ----------------
    Uses Google Drive's own sharing. A folder that exists in several accounts is shared in
    every account; the link then opens a PoolDrive page that shows all parts together. */
+const EXP_OPTS = [['', 'No end date'], ['3600000', '1 hour'], ['86400000', '1 day'], ['604800000', '7 days'], ['2592000000', '30 days']];
+const pdxKey = em => 'pdx_' + [...em.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+const expTxt = t => 'until ' + new Date(t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+// Remove shares whose end time has passed (Google removes expiring people by itself; "anyone with the link" is removed here).
+async function shareSweep() {
+  await Promise.allSettled(live().map(async a => {
+    const r = await api(a, 'files?' + qs({ q: "appProperties has { key='pdxOn' and value='1' } and trashed=false", fields: 'files(id,appProperties)', pageSize: 200 }));
+    for (const f of r.files) {
+      const ap = f.appProperties || {}, now = Date.now(), done = {}; let left = 0, perms = null;
+      for (const [k, v] of Object.entries(ap)) {
+        if (!k.startsWith('pdx_')) continue;
+        const [ts, em] = String(v).split('|');
+        if (+ts > now) { left++; continue; }
+        perms = perms || ((await api(a, `files/${f.id}/permissions?` + qs({ fields: 'permissions(id,type,emailAddress)' }))).permissions || []);
+        const p = k === 'pdx_any' ? perms.find(x => x.type === 'anyone') : perms.find(x => (x.emailAddress || '').toLowerCase() === (em || '').toLowerCase());
+        if (p) await api(a, `files/${f.id}/permissions/${p.id}`, { method: 'DELETE' }).catch(() => {});
+        done[k] = null;
+      }
+      if (!left) done.pdxOn = null;
+      if (Object.keys(done).length) await api(a, `files/${f.id}?fields=id`, jsonOpts('PATCH', { appProperties: done })).catch(() => {});
+    }
+  }));
+}
 async function shareLinkDialog(it) {
   if (!it) return;
   const isFolder = it.kind === 'folder';
   const refs = isFolder ? it.refs : [{ email: it.email, id: it.id }];
   if (!refs.length) return toast('Nothing to share yet', true);
   const mine = new Set(accounts.map(a => a.email.toLowerCase()));
-  let perms = [];   // per ref: permissions list
+  let perms = [], aps = [];   // per ref: permissions list, and PoolDrive's saved end times
   const load = async () => {
-    perms = await Promise.all(refs.map(async r => { try { return (await api(accBy(r.email), `files/${r.id}/permissions?` + qs({ fields: 'permissions(id,type,role,emailAddress,displayName)' }))).permissions || []; } catch (e) { return []; } }));
+    perms = await Promise.all(refs.map(async r => { try { return (await api(accBy(r.email), `files/${r.id}/permissions?` + qs({ fields: 'permissions(id,type,role,emailAddress,displayName,expirationTime)' }))).permissions || []; } catch (e) { return []; } }));
+    aps = await Promise.all(refs.map(async r => { try { return (await api(accBy(r.email), `files/${r.id}?fields=appProperties`)).appProperties || {}; } catch (e) { return {}; } }));
   };
+  const endOf = key => { for (const ap of aps) { const v = ap[key]; if (v && +String(v).split('|')[0] > Date.now()) return +String(v).split('|')[0]; } return 0; };
+  const setEnd = (key, val) => each((a, r) => api(a, `files/${r.id}?fields=id`, jsonOpts('PATCH', { appProperties: val ? { pdxOn: '1', [key]: val } : { [key]: null } })));
+  const expSel = (id, cur) => `<select id="${id}" aria-label="Access ends"><option value="">${cur ? escH(expTxt(cur)) : 'No end date'}</option>${EXP_OPTS.slice(1).map(([v, t]) => `<option value="${v}">Ends in ${t}</option>`).join('')}${cur ? '<option value="none">Remove end date</option>' : ''}</select>`;
   const people = () => { const m = new Map(); perms.flat().forEach(p => { if (p.type === 'user' && p.role !== 'owner' && p.emailAddress && !mine.has(p.emailAddress.toLowerCase())) { const k = p.emailAddress.toLowerCase(); if (!m.has(k)) m.set(k, p); } }); return [...m.values()]; };
   const anyone = () => perms.some(ps => ps.some(p => p.type === 'anyone'));
   const link = () => refs.length === 1
@@ -2025,36 +2066,54 @@ async function shareLinkDialog(it) {
       <p class="sub" style="margin:0 0 12px">${isFolder ? 'Folder' : 'File'}${refs.length > 1 ? ` · stored in ${refs.length} accounts` : ''}</p>
       <form id="shAdd" class="sh-add"><label for="shEm" class="sr">Add people by email</label><input id="shEm" type="email" placeholder="Add people by email" required autocomplete="email">
         <select id="shRole" aria-label="Access"><option value="reader">Can view</option><option value="writer">Can edit</option></select><button class="primary" type="submit">Add</button></form>
+      <div class="sh-exp"><label for="shExp">Access for new people ends</label><select id="shExp">${EXP_OPTS.map(([v, t]) => `<option value="${v}">${v ? 'After ' + t : 'Never'}</option>`).join('')}</select></div>
       <div class="sh-lbl">People with access</div>
       <div class="sh-p"><span class="av">${escH((accounts[0] && accounts[0].email[0] || 'Y').toUpperCase())}</span><div><b>You</b><small>Owner</small></div></div>
-      ${ps.map(p => `<div class="sh-p"><span class="av" style="background:#0ea5e9">${escH((p.displayName || p.emailAddress)[0].toUpperCase())}</span><div style="min-width:0"><b>${escH(p.displayName || p.emailAddress)}</b><small>${escH(p.emailAddress)}</small></div>
+      ${ps.map(p => `<div class="sh-p"><span class="av" style="background:#0ea5e9">${escH((p.displayName || p.emailAddress)[0].toUpperCase())}</span><div style="min-width:0"><b>${escH(p.displayName || p.emailAddress)}</b><small>${escH(p.emailAddress)}${(() => { const t = endOf(pdxKey(p.emailAddress)) || (p.expirationTime ? Date.parse(p.expirationTime) : 0); return t ? ' · <span class="sh-until">' + escH(expTxt(t)) + '</span>' : ''; })()}</small></div>
         <select data-shrole="${escH(p.emailAddress)}" aria-label="Access for ${escH(p.emailAddress)}"><option value="reader"${p.role !== 'writer' ? ' selected' : ''}>Can view</option><option value="writer"${p.role === 'writer' ? ' selected' : ''}>Can edit</option><option value="remove">Remove</option></select></div>`).join('')}
       <div class="sh-lbl" style="margin-top:14px">Who can open the link</div>
       <div class="sh-opts"><button data-shacc="0" class="${any ? '' : 'on'}"><b>Only people added</b><small>They sign in with Google</small></button><button data-shacc="1" class="${any ? 'on' : ''}"><b>Anyone with the link</b><small>No sign-in, view only</small></button></div>
+      ${any ? `<div class="sh-exp"><label for="shLinkExp">Link stops working</label>${expSel('shLinkExp', endOf('pdx_any'))}</div>` : ''}
       ${refs.length > 1 ? '<p class="sh-note">This folder is spread over ' + refs.length + ' accounts. PoolDrive shares every part and gives you <b>one link</b> that shows them together.</p>' : ''}
       <div class="right" style="justify-content:space-between;margin-top:14px"><button data-shstop${ps.length || any ? '' : ' disabled'}>Stop sharing</button><span style="display:flex;gap:8px">${navigator.share ? '<button data-shsend>Send link</button>' : ''}<button class="primary" data-shcopy>Copy link</button></span></div>`, 'share');
     $('#shAdd').onsubmit = async e => {
-      e.preventDefault(); const em = $('#shEm').value.trim(), role = $('#shRole').value; if (!em) return;
+      e.preventDefault(); const em = $('#shEm').value.trim(), role = $('#shRole').value, dur = +$('#shExp').value || 0; if (!em) return;
       busy(true);
-      try { await each((a, r) => api(a, `files/${r.id}/permissions?` + qs({ sendNotificationEmail: 'true', fields: 'id' }), jsonOpts('POST', { type: 'user', role, emailAddress: em }))); toast(`Shared with ${em}. They get an email from Google.`); }
+      try {
+        const until = dur ? Date.now() + dur : 0;
+        await each(async (a, r) => {
+          const body = { type: 'user', role, emailAddress: em };
+          const add = b => api(a, `files/${r.id}/permissions?` + qs({ sendNotificationEmail: 'true', fields: 'id' }), jsonOpts('POST', b));
+          if (until) { try { return await add({ ...body, expirationTime: new Date(until).toISOString() }); } catch (err) { if (err instanceof AuthErr) throw err; } }   // Google ends it on time; if not allowed here, PoolDrive ends it
+          return add(body);
+        });
+        if (until) await setEnd(pdxKey(em), until + '|' + em);
+        toast(`Shared with ${em}${until ? ' ' + expTxt(until) : ''}. They get an email from Google.`);
+      }
       catch (err) { handleErr(err); }
       await load(); draw();
     };
     $('#sheet').querySelectorAll('[data-shrole]').forEach(s => s.onchange = async () => {
       const em = s.dataset.shrole.toLowerCase(), v = s.value; busy(true);
-      try { await each((a, r, ps) => { const p = ps.find(x => (x.emailAddress || '').toLowerCase() === em); if (!p) return; return v === 'remove' ? api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }) : api(a, `files/${r.id}/permissions/${p.id}?fields=id`, jsonOpts('PATCH', { role: v })); }); toast(v === 'remove' ? 'Removed' : 'Access changed'); }
+      try { await each((a, r, ps) => { const p = ps.find(x => (x.emailAddress || '').toLowerCase() === em); if (!p) return; return v === 'remove' ? api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }).then(() => api(a, `files/${r.id}?fields=id`, jsonOpts('PATCH', { appProperties: { [pdxKey(em)]: null } }))) : api(a, `files/${r.id}/permissions/${p.id}?fields=id`, jsonOpts('PATCH', { role: v })); }); toast(v === 'remove' ? 'Removed' : 'Access changed'); }
       catch (err) { handleErr(err); }
       await load(); draw();
     });
     $('#sheet').querySelectorAll('[data-shacc]').forEach(b => b.onclick = async () => {
       const on = b.dataset.shacc === '1'; if (on === anyone()) return; busy(true);
-      try { await each((a, r, ps) => { const p = ps.find(x => x.type === 'anyone'); if (on && !p) return api(a, `files/${r.id}/permissions?fields=id`, jsonOpts('POST', { type: 'anyone', role: 'reader' })); if (!on && p) return api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }); }); toast(on ? 'Anyone with the link can now view it' : 'Only people you added can open it'); }
+      try { await each((a, r, ps) => { const p = ps.find(x => x.type === 'anyone'); if (on && !p) return api(a, `files/${r.id}/permissions?fields=id`, jsonOpts('POST', { type: 'anyone', role: 'reader' })); if (!on && p) return api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }); }); if (!on) await setEnd('pdx_any', 0); toast(on ? 'Anyone with the link can now view it' : 'Only people you added can open it'); }
       catch (err) { handleErr(err); }
       await load(); draw();
     });
+    const le = $('#shLinkExp'); if (le) le.onchange = async () => {
+      const v = le.value; if (!v) return; busy(true);
+      try { if (v === 'none') { await setEnd('pdx_any', 0); toast('The link has no end date'); } else { const t = Date.now() + +v; await setEnd('pdx_any', String(t)); toast('The link stops working ' + expTxt(t)); } }
+      catch (err) { handleErr(err); }
+      await load(); draw();
+    };
     $('#sheet').querySelector('[data-shstop]').onclick = async () => {
       if (!confirm(`Stop sharing “${it.name}”? Everyone you added loses access and the link stops working.`)) return; busy(true);
-      try { await each((a, r, ps) => Promise.all(ps.filter(p => p.role !== 'owner' && !(p.emailAddress && mine.has(p.emailAddress.toLowerCase()))).map(p => api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' })))); toast('Sharing stopped'); }
+      try { await each((a, r, ps) => Promise.all(ps.filter(p => p.role !== 'owner' && !(p.emailAddress && mine.has(p.emailAddress.toLowerCase()))).map(p => api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' })))); await each((a, r, ps, i) => { const ap = aps[refs.indexOf(r)] || {}; const clr = { pdxOn: null }; Object.keys(ap).filter(k => k.startsWith('pdx_')).forEach(k => clr[k] = null); return api(a, `files/${r.id}?fields=id`, jsonOpts('PATCH', { appProperties: clr })); }); toast('Sharing stopped'); }
       catch (err) { handleErr(err); }
       await load(); draw();
     };
@@ -2231,7 +2290,8 @@ addEventListener('keydown', e => { if ($('#modal').dataset.view !== 'photo') ret
 const setHH = () => document.documentElement.style.setProperty('--hh', ($('.mobile-top').offsetHeight || 0) + 'px');
 setHH(); addEventListener('resize', setHH);
 renderSpace();
-(async () => { try { await refreshAll(); } catch {} renderSpace(); updateBanner(); reload(); })();
+(async () => { try { await refreshAll(); } catch {} renderSpace(); updateBanner(); reload(); shareSweep(); })();
+setInterval(() => shareSweep(), 30 * 60e3);
 if (!cfg.clientId) showSetup();
 
 /* ---------------- App install + "Share → PoolDrive" from other apps ---------------- */
