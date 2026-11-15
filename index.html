@@ -364,6 +364,9 @@ body[data-mode="vault"] .vtoggle,body[data-mode="vault"] .actions,body[data-mode
 .shake{animation:vshake .35s}@keyframes vshake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .v-crumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:-4px 0 10px;font-size:14px}.v-crumbs button{border:0;background:none;padding:4px 6px;color:var(--accent);font-weight:600}.v-crumbs button:last-child{color:var(--text)}.v-crumbs span{color:var(--muted)}
 .v-dir{cursor:pointer}.v-dir .ic.folder{background:none;width:38px;height:38px;display:grid;place-items:center}
+.v-top{margin-left:auto;display:flex;gap:6px;flex:none}.v-top button{font-size:13.5px;font-weight:600;padding:8px 12px}
+.v-actions{flex-wrap:wrap}.v-actions button{flex:1 1 auto}
+.ph-head{min-width:0}.ph-head>div{min-width:0}
 </style>
 </head>
 <body>
@@ -2408,7 +2411,7 @@ async function vLoadItems() {
 function renderVault() {
   if (mode !== 'vault' || searchQ) return;
   const el = $('#list');
-  const head = sub => `<div class="ph-head"><div><h2>🔒 Vault</h2><small>${sub}</small></div>${VLT.key ? '<button data-v="lock" class="ph-selbtn">Lock</button>' : ''}</div>`;
+  const head = sub => `<div class="ph-head"><div><h2>🔒 Vault</h2><small>${sub}</small></div>${VLT.key ? `<span class="v-top">${VLT.items && !VLT.cwd && !VLT.step ? '<button data-v="chpin">Change PIN</button>' : ''}<button data-v="lock">Lock</button></span>` : ''}</div>`;
   if (!live().length) { el.innerHTML = head('') + '<div class="list empty"><h3>Reconnect your accounts</h3><p>The vault needs at least one signed-in account.</p></div>'; return; }
   if (VLT.cfg === null) { el.innerHTML = head('Checking…') + '<div class="spinner"></div>'; vLoadCfg().then(c => { VLT.cfg = c; renderVault(); }); return; }
   if (VLT.step === 'code') {   // just created: show the recovery code once
@@ -2442,7 +2445,7 @@ function renderVault() {
   const crumbs = cwd ? `<nav class="v-crumbs"><button data-vcd="">Vault</button>${cwd.split('/').map((n, i, a) => `<span>›</span><button data-vcd="${escH(a.slice(0, i + 1).join('/'))}">${escH(n)}</button>`).join('')}</nav>` : '';
   const here = VLT.items.map((f, i) => [f, i]).filter(([f]) => inDir(f));
   el.innerHTML = head(`${VLT.items.length} document${VLT.items.length === 1 ? '' : 's'} · locks itself after 5 minutes`) + crumbs +
-    `<div class="v-actions"><button class="primary" data-v="add">${phI('plus', 18)}Add documents</button><button data-v="mkdir">+ New folder</button>${cwd ? '' : '<button data-v="chpin">Change PIN</button>'}</div>` +
+    `<div class="v-actions"><button class="primary" data-v="add">${phI('plus', 18)}Add documents</button><button data-v="mkdir">+ New folder</button></div>` +
     (subs.length || here.length ? '<div class="list v-list">' + subs.map(d => `<div class="v-row v-dir" data-vcd="${escH(d)}"><span class="ic folder">${FOLDER_SVG}</span><div class="v-nm"><b>${escH(vBase(d))}</b><small>${countIn(d)} document${countIn(d) === 1 ? '' : 's'}</small></div>
       <button data-vren="${escH(d)}">Rename</button><button data-vrm="${escH(d)}" aria-label="Delete folder ${escH(vBase(d))}" class="v-del">${phI('trash', 18)}</button></div>`).join('') + here.map(([f, i]) => `<div class="v-row"><span class="ic" style="--c:#4f46e5">${escH(((f.meta.name.split('.').pop() || 'file').slice(0, 4)).toUpperCase())}</span><div class="v-nm"><b>${escH(f.meta.name)}</b><small>${fmt(+f.meta.size || +f.size || 0)} · ${fmtDate(f.createdTime)}</small></div>
       <button data-vo="${i}">Open</button><button data-vm="${i}">Move</button><button data-vd="${i}" aria-label="Download ${escH(f.meta.name)}">${phI('download', 18)}</button><button data-vx="${i}" aria-label="Delete ${escH(f.meta.name)}" class="v-del">${phI('trash', 18)}</button></div>`).join('') + '</div>'
