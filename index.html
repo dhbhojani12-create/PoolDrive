@@ -289,6 +289,49 @@ body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
   .arow{grid-template-columns:24px minmax(0,1fr) auto;}
   .arow .path{display:none}
 }
+
+/* Photos */
+body[data-mode="photos"] .vtoggle,body[data-mode="photos"] .actions,body[data-mode="photos"] #crumbs{display:none}
+.ph-head{display:flex;align-items:center;gap:10px;margin:2px 0 12px}.ph-head h2{margin:0;font-size:22px}.ph-head small{color:var(--muted);font-size:12.5px}
+.ph-back{border:0;background:none;padding:6px}.ph-sharealb{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:13.5px}
+.ph-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.ph-chip{border-radius:99px;padding:7px 14px;font-size:13.5px;font-weight:600}.ph-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ph-sec{font-weight:700;font-size:15px;margin:16px 0 8px}
+.ph-albums{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.ph-alb{flex:none;width:118px;border:0;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:2px;white-space:normal}
+.ph-alb .cov{width:118px;height:118px;border-radius:14px;background:var(--hover) center/cover no-repeat;display:grid;place-items:center;margin-bottom:4px}
+.ph-alb.new .cov{border:2px dashed var(--accent);background:var(--accent-soft);color:var(--accent);box-sizing:border-box}.ph-alb.new b{color:var(--accent)}
+.ph-alb b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ph-alb small{font-size:12px;color:var(--muted)}
+.ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:3px}
+.ph-t{position:relative;aspect-ratio:1;border:0;border-radius:4px;padding:0;overflow:hidden;background:var(--hover);display:block}
+.ph-t img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph-t .nm{position:absolute;left:6px;right:6px;bottom:6px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph-t img+.nm{display:none}
+.ph-t .vid{position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center}
+@media (max-width:760px){.ph-grid{grid-template-columns:repeat(3,1fr);gap:2px}.ph-t{border-radius:0}}
+.sheet.dark{background:#0b0b0f;color:#fff;border-radius:0;width:100vw;height:100vh;max-height:none}
+#modal[data-view="photo"]{padding:0}
+.pv-dark{position:relative;height:100%;display:flex;flex-direction:column}
+.pv-top{display:flex;align-items:center;gap:8px;padding:12px}.pv-top button{border:0;background:none;color:#fff}.pv-t{display:flex;flex-direction:column;min-width:0}.pv-t b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pv-t small{color:#b9b9c6}
+.pv-img{flex:1;min-height:0;display:grid;place-items:center}.pv-img img{max-width:100%;max-height:100%;object-fit:contain}
+.pv-nav{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:50%;width:46px;height:46px;display:grid;place-items:center;padding:0}.pv-nav.l{left:12px}.pv-nav.r{right:12px}.pv-nav:disabled{opacity:.25}
+.pv-bar{display:flex;justify-content:space-around;padding:10px 8px calc(16px + env(safe-area-inset-bottom,0px));background:#141419}
+.pv-bar button{border:0;background:none;color:#fff;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px}
+@media (max-width:760px){.pv-nav{display:none}}
+/* Share link */
+.sr{position:absolute;left:-9999px}
+.sh-add{display:flex;gap:8px;margin-bottom:12px}.sh-add input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.sh-add select{border-radius:10px;border:1px solid var(--line);background:var(--card);padding:0 8px}
+.sh-lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px}
+.sh-p{display:flex;align-items:center;gap:12px;padding:7px 0}.sh-p>div{flex:1;display:flex;flex-direction:column}.sh-p small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.sh-p .av{width:34px;height:34px;flex:none;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700}
+.sh-p select{border-radius:10px;border:1px solid var(--line);background:var(--card);padding:6px 8px}
+.sh-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sh-opts button{white-space:normal;text-align:left;padding:11px 12px;border-radius:12px;display:flex;flex-direction:column;gap:3px}.sh-opts small{color:var(--muted);font-size:12px}
+.sh-opts button.on{border:2px solid var(--accent);background:var(--accent-soft)}
+.sh-note{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:12.5px;color:var(--muted);line-height:1.45}
+/* Shared link page */
+.sv{max-width:980px;margin:0 auto;padding:18px 16px 40px}.sv-top{display:flex;align-items:center;gap:10px;color:var(--muted);font-weight:600}.sv-top .logo{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center}
+.sv h1{margin:16px 0 4px;font-size:26px}.sv-sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+.sv-part{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid var(--line)}.sv-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}.sv-h a{color:var(--accent);font-weight:600;text-decoration:none}
+.sv iframe{display:block;width:100%;height:70vh;border:0;background:#fff}
 </style>
 </head>
 <body>
@@ -302,6 +345,7 @@ body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
   </div>
   <nav class="nav" aria-label="Sections">
     <button data-nav="files" class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>All files</button>
+    <button data-nav="photos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>Photos</button>
     <button data-nav="recent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent</button>
     <button data-nav="locked"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked folders</button>
     <button data-nav="analysis"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
@@ -322,7 +366,7 @@ body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
     <div><div class="st"><span><b id="mFree">—</b> free</span><span id="mTotal"></span></div><div class="segbar" id="mBar" style="height:6px;margin-top:6px"></div></div>
   </div>
   <div class="mnav" aria-label="Sections">
-    <button data-nav="files" class="on">All files</button><button data-nav="recent">Recent</button><button data-nav="locked">Locked</button><button data-nav="analysis">Analysis</button>
+    <button data-nav="files" class="on">All files</button><button data-nav="photos">Photos</button><button data-nav="recent">Recent</button><button data-nav="locked">Locked</button><button data-nav="analysis">Analysis</button>
   </div>
   <div id="banner" class="banner hidden"></div>
   <main>
@@ -361,6 +405,22 @@ body[data-mode="recent"] .vtoggle,body[data-mode="recent"] #sort{display:none}
 <div id="toast"></div>
 
 <script>
+/* A shared PoolDrive link (?view=id1,id2&n=Name): shows every part of a folder that is
+   stored in several accounts, using Google Drive's own public folder view. No sign-in. */
+(function () {
+  const p = new URLSearchParams(location.search), ids = (p.get('view') || '').split(',').filter(x => /^[\w-]{10,}$/.test(x));
+  if (!ids.length) return;
+  window.__PDVIEW = true;
+  const name = (p.get('n') || 'Shared folder').slice(0, 120);
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  document.title = name + ' · PoolDrive';
+  document.body.innerHTML = `<div class="sv"><div class="sv-top"><div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><span>Shared with you via PoolDrive</span></div>
+    <h1>${esc(name)}</h1><p class="sv-sub">${ids.length > 1 ? 'This folder is kept in ' + ids.length + ' parts. All of them are shown below.' : ''} Files open in Google Drive. If a part asks you to sign in, it was shared only with specific people.</p>
+    ${ids.map((id, i) => `<section class="sv-part">${ids.length > 1 ? `<div class="sv-h"><b>Part ${i + 1}</b><a href="https://drive.google.com/drive/folders/${id}" target="_blank" rel="noopener">Open in Google Drive</a></div>` : `<div class="sv-h"><span></span><a href="https://drive.google.com/drive/folders/${id}" target="_blank" rel="noopener">Open in Google Drive</a></div>`}<iframe title="${esc(name)} part ${i + 1}" src="https://drive.google.com/embeddedfolderview?id=${id}#grid" loading="lazy"></iframe></section>`).join('')}</div>`;
+})();
+</script>
+<script>
+if (window.__PDVIEW) throw new Error('PoolDrive: showing a shared link');
 /* ============================================================
    PoolDrive: several Google Drive accounts used as one drive.
    Everything runs in the browser. Sign-in tokens stay on this
@@ -644,7 +704,7 @@ function merge(groups) {
 /* ---------------- Loading & search ---------------- */
 let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
 
-let mode = 'files';   // files | recent | locked | analysis
+let mode = 'files';   // files | photos | recent | locked | analysis
 function setMode(m) {
   if (m === 'trash') return trashMenu();
   mode = m;
@@ -697,6 +757,7 @@ async function reload() {
   if (!cfg.clientId) return renderList();
   if (!accounts.length) { items = []; return renderList(); }
   if (mode === 'analysis') return renderAnalysis();
+  if (mode === 'photos' && !searchQ) return loadPhotos();
   if (mode === 'recent' && !searchQ) return loadRecent();
   if (mode === 'locked' && !searchQ) return loadLocked();
   if (searchQ) return doSearch();
@@ -855,6 +916,7 @@ function renderList() {
   }
   if (loading) { el.innerHTML = '<div class="list"><div class="spinner"></div></div>'; return; }
   if (mode === 'analysis' && !searchQ) return renderAnalysis();
+  if (mode === 'photos' && !searchQ) return renderPhotos();
   view = sortedItems();
   if (!view.length) {
     const msg = searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
@@ -1549,8 +1611,8 @@ async function newFolder() {
 function openMenu(it, anchor) {
   const m = $('#menu');
   const acts = it.kind === 'folder'
-    ? [['open', 'Open'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], it.locked ? ['unlock', '🔓 Unlock folder'] : ['lock', '🔒 Lock folder'], '-', ['delete', 'Move to trash']]
-    : [['open', 'Open'], ...(canShareOut ? [['share', 'Share…']] : []), ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
+    ? [['open', 'Open'], ['link', 'Share link…'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], it.locked ? ['unlock', '🔓 Unlock folder'] : ['lock', '🔒 Lock folder'], '-', ['delete', 'Move to trash']]
+    : [['open', 'Open'], ...(canShareOut ? [['share', 'Share…']] : []), ['link', 'Share link…'], ['download', 'Download'], ['move', 'Move to…'], ['rename', 'Rename'], ['info', 'Details'], ...(it.fromSearch ? [['locate', 'Show in folder']] : []), ['drive', 'Open in Google Drive'], '-', ['delete', 'Move to trash']];
   m.innerHTML = acts.map(a => a === '-' ? '<hr>' : `<button data-act="${a[0]}" class="${a[0] === 'delete' ? 'danger' : ''}">${a[1]}</button>`).join('');
   m.classList.remove('hidden');
   const r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
@@ -1559,7 +1621,7 @@ function openMenu(it, anchor) {
   m.onclick = e => {
     const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
     closeMenu();
-    ({ open: () => openItem(it), download: () => downloadFile(it), share: () => shareFile(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
+    ({ open: () => openItem(it), download: () => downloadFile(it), share: () => shareFile(it), link: () => shareLinkDialog(it), rename: () => renameItem(it), info: () => showInfo(it), move: () => showMovePicker(selected.has(ikey(it)) ? [...selected.values()] : [it]),
        lock: () => setLock(it, true), unlock: () => setLock(it, false),
        locate: () => goToLocation(it), drive: () => window.open(driveLink(it), '_blank', 'noopener'), delete: () => deleteItem(it) })[act]();
   };
@@ -1696,7 +1758,7 @@ async function startUpload(entries) {
   entries = entries.filter(e => e.file);
   if (!entries.length) return;
   if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
-  if (searchQ || mode !== 'files') { clearSearch(); mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); reload(); }
+  if (searchQ || (mode !== 'files' && mode !== 'photos')) { clearSearch(); mode = 'files'; document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === 'files')); reload(); }
 
   if (entries.length > 20) toast('Checking for files that already exist…');
   const conflicts = await findConflicts(entries);
@@ -1904,8 +1966,8 @@ $('#search').addEventListener('input', e => {
 });
 $('#sort').value = cfg.sort;
 $('#sort').onchange = e => { cfg.sort = e.target.value; saveCfg(); renderList(); };
-$('#btnUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
-$('#fabUpload').onclick = e => { e.stopPropagation(); uploadMenu(e.currentTarget); };
+$('#btnUpload').onclick = e => { e.stopPropagation(); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
+$('#fabUpload').onclick = e => { e.stopPropagation(); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
 $('#mNewFolder').onclick = newFolder;
 $('#mAccounts').onclick = showAccounts;
 $('#accList').addEventListener('click', e => { if (e.target.closest('.acc-more')) showAccounts(); });
@@ -1937,6 +1999,233 @@ function toast(msg, err) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
   $('#toast').appendChild(t); setTimeout(() => t.remove(), err ? 5000 : 3000);
 }
+
+/* ---------------- Share link (folders, albums and files) ----------------
+   Uses Google Drive's own sharing. A folder that exists in several accounts is shared in
+   every account; the link then opens a PoolDrive page that shows all parts together. */
+async function shareLinkDialog(it) {
+  if (!it) return;
+  const isFolder = it.kind === 'folder';
+  const refs = isFolder ? it.refs : [{ email: it.email, id: it.id }];
+  if (!refs.length) return toast('Nothing to share yet', true);
+  const mine = new Set(accounts.map(a => a.email.toLowerCase()));
+  let perms = [];   // per ref: permissions list
+  const load = async () => {
+    perms = await Promise.all(refs.map(async r => { try { return (await api(accBy(r.email), `files/${r.id}/permissions?` + qs({ fields: 'permissions(id,type,role,emailAddress,displayName)' }))).permissions || []; } catch (e) { return []; } }));
+  };
+  const people = () => { const m = new Map(); perms.flat().forEach(p => { if (p.type === 'user' && p.role !== 'owner' && p.emailAddress && !mine.has(p.emailAddress.toLowerCase())) { const k = p.emailAddress.toLowerCase(); if (!m.has(k)) m.set(k, p); } }); return [...m.values()]; };
+  const anyone = () => perms.some(ps => ps.some(p => p.type === 'anyone'));
+  const link = () => refs.length === 1
+    ? (isFolder ? `https://drive.google.com/drive/folders/${refs[0].id}` : `https://drive.google.com/file/d/${refs[0].id}/view`)
+    : location.origin + location.pathname + '?' + qs({ view: refs.map(r => r.id).join(','), n: it.name });
+  const each = (fn) => Promise.all(refs.map((r, i) => fn(accBy(r.email), r, perms[i] || [])));
+  const draw = () => {
+    const ps = people(), any = anyone();
+    showModal(`<h2>Share “${escH(it.name)}”</h2>
+      <p class="sub" style="margin:0 0 12px">${isFolder ? 'Folder' : 'File'}${refs.length > 1 ? ` · stored in ${refs.length} accounts` : ''}</p>
+      <form id="shAdd" class="sh-add"><label for="shEm" class="sr">Add people by email</label><input id="shEm" type="email" placeholder="Add people by email" required autocomplete="email">
+        <select id="shRole" aria-label="Access"><option value="reader">Can view</option><option value="writer">Can edit</option></select><button class="primary" type="submit">Add</button></form>
+      <div class="sh-lbl">People with access</div>
+      <div class="sh-p"><span class="av">${escH((accounts[0] && accounts[0].email[0] || 'Y').toUpperCase())}</span><div><b>You</b><small>Owner</small></div></div>
+      ${ps.map(p => `<div class="sh-p"><span class="av" style="background:#0ea5e9">${escH((p.displayName || p.emailAddress)[0].toUpperCase())}</span><div style="min-width:0"><b>${escH(p.displayName || p.emailAddress)}</b><small>${escH(p.emailAddress)}</small></div>
+        <select data-shrole="${escH(p.emailAddress)}" aria-label="Access for ${escH(p.emailAddress)}"><option value="reader"${p.role !== 'writer' ? ' selected' : ''}>Can view</option><option value="writer"${p.role === 'writer' ? ' selected' : ''}>Can edit</option><option value="remove">Remove</option></select></div>`).join('')}
+      <div class="sh-lbl" style="margin-top:14px">Who can open the link</div>
+      <div class="sh-opts"><button data-shacc="0" class="${any ? '' : 'on'}"><b>Only people added</b><small>They sign in with Google</small></button><button data-shacc="1" class="${any ? 'on' : ''}"><b>Anyone with the link</b><small>No sign-in, view only</small></button></div>
+      ${refs.length > 1 ? '<p class="sh-note">This folder is spread over ' + refs.length + ' accounts. PoolDrive shares every part and gives you <b>one link</b> that shows them together.</p>' : ''}
+      <div class="right" style="justify-content:space-between;margin-top:14px"><button data-shstop${ps.length || any ? '' : ' disabled'}>Stop sharing</button><span style="display:flex;gap:8px">${navigator.share ? '<button data-shsend>Send link</button>' : ''}<button class="primary" data-shcopy>Copy link</button></span></div>`, 'share');
+    $('#shAdd').onsubmit = async e => {
+      e.preventDefault(); const em = $('#shEm').value.trim(), role = $('#shRole').value; if (!em) return;
+      busy(true);
+      try { await each((a, r) => api(a, `files/${r.id}/permissions?` + qs({ sendNotificationEmail: 'true', fields: 'id' }), jsonOpts('POST', { type: 'user', role, emailAddress: em }))); toast(`Shared with ${em}. They get an email from Google.`); }
+      catch (err) { handleErr(err); }
+      await load(); draw();
+    };
+    $('#sheet').querySelectorAll('[data-shrole]').forEach(s => s.onchange = async () => {
+      const em = s.dataset.shrole.toLowerCase(), v = s.value; busy(true);
+      try { await each((a, r, ps) => { const p = ps.find(x => (x.emailAddress || '').toLowerCase() === em); if (!p) return; return v === 'remove' ? api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }) : api(a, `files/${r.id}/permissions/${p.id}?fields=id`, jsonOpts('PATCH', { role: v })); }); toast(v === 'remove' ? 'Removed' : 'Access changed'); }
+      catch (err) { handleErr(err); }
+      await load(); draw();
+    });
+    $('#sheet').querySelectorAll('[data-shacc]').forEach(b => b.onclick = async () => {
+      const on = b.dataset.shacc === '1'; if (on === anyone()) return; busy(true);
+      try { await each((a, r, ps) => { const p = ps.find(x => x.type === 'anyone'); if (on && !p) return api(a, `files/${r.id}/permissions?fields=id`, jsonOpts('POST', { type: 'anyone', role: 'reader' })); if (!on && p) return api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' }); }); toast(on ? 'Anyone with the link can now view it' : 'Only people you added can open it'); }
+      catch (err) { handleErr(err); }
+      await load(); draw();
+    });
+    $('#sheet').querySelector('[data-shstop]').onclick = async () => {
+      if (!confirm(`Stop sharing “${it.name}”? Everyone you added loses access and the link stops working.`)) return; busy(true);
+      try { await each((a, r, ps) => Promise.all(ps.filter(p => p.role !== 'owner' && !(p.emailAddress && mine.has(p.emailAddress.toLowerCase()))).map(p => api(a, `files/${r.id}/permissions/${p.id}`, { method: 'DELETE' })))); toast('Sharing stopped'); }
+      catch (err) { handleErr(err); }
+      await load(); draw();
+    };
+    $('#sheet').querySelector('[data-shcopy]').onclick = async () => {
+      if (!people().length && !anyone()) toast('Tip: add people or choose “Anyone with the link” so others can open it');
+      try { await navigator.clipboard.writeText(link()); toast('Link copied'); } catch { prompt('Copy this link:', link()); }
+    };
+    const sd = $('#sheet').querySelector('[data-shsend]'); if (sd) sd.onclick = () => navigator.share({ title: it.name, url: link() }).catch(() => {});
+  };
+  const busy = on => { $('#sheet').querySelectorAll('button,select,input').forEach(x => x.disabled = on); };
+  showModal('<h2>Share</h2><div class="spinner"></div>', 'share');
+  await load(); draw();
+}
+
+/* ---------------- Photos ----------------
+   Every photo and video in all accounts, newest first, grouped by month.
+   Albums are folders inside a top-level "Photos" folder (merged across accounts). */
+const PH = { items: [], toks: {}, more: false, loading: false, filter: 'all', album: null, albums: null, seq: 0 };
+const PH_FIELDS = 'id,name,mimeType,size,modifiedTime,createdTime,thumbnailLink,imageMediaMetadata(time),videoMediaMetadata(durationMillis),parents,webViewLink';
+const phDate = f => { const t = f.imageMediaMetadata && f.imageMediaMetadata.time; if (t && /^\d{4}:\d\d:\d\d/.test(t)) return t.slice(0, 10).replace(/:/g, '-') + 'T' + (t.slice(11) || '00:00:00'); return f.createdTime || f.modifiedTime || ''; };
+const phThumb = (f, s) => f.thumbnailLink ? f.thumbnailLink.replace(/=s\d+(-[a-z0-9-]+)?$/i, '') + '=s' + s : '';
+const isVid = f => (f.mimeType || '').startsWith('video/');
+function phQuery(email) {
+  let q = "(mimeType contains 'image/' or mimeType contains 'video/') and trashed=false";
+  if (PH.filter === 'videos') q = "mimeType contains 'video/' and trashed=false";
+  if (PH.filter === 'shots') q = "mimeType contains 'image/' and name contains 'Screenshot' and trashed=false";
+  if (PH.album) { const r = PH.album.refs.filter(x => x.email === email); if (!r.length) return null; q += ' and (' + r.map(x => `'${x.id}' in parents`).join(' or ') + ')'; }
+  return q;
+}
+async function loadPhotos(more) {
+  const seq = more ? PH.seq : ++PH.seq;
+  if (!more) { PH.items = []; PH.toks = {}; PH.loading = true; renderPhotos(); if (!PH.album) loadAlbums(); }
+  const accs = live().filter(a => !more || PH.toks[a.email]);
+  const res = await Promise.allSettled(accs.map(async a => {
+    const q = phQuery(a.email); if (!q) return [];
+    const p = { q, orderBy: 'createdTime desc', fields: `nextPageToken,files(${PH_FIELDS})`, pageSize: 200 };
+    if (more) p.pageToken = PH.toks[a.email];
+    const r = await api(a, 'files?' + qs(p));
+    PH.toks[a.email] = r.nextPageToken || null;
+    return r.files.map(f => ({ kind: 'file', ...f, email: a.email, fromSearch: true }));
+  }));
+  if (seq !== PH.seq) return;
+  res.forEach(x => { if (x.status === 'rejected' && !(x.reason instanceof AuthErr)) toast(x.reason.message, true); });
+  const seen = new Set(PH.items.map(f => f.id));
+  PH.items.push(...res.filter(x => x.status === 'fulfilled').flatMap(x => x.value).filter(f => !seen.has(f.id)));
+  PH.items.sort((a, b) => phDate(b).localeCompare(phDate(a)));
+  PH.more = Object.values(PH.toks).some(Boolean);
+  PH.loading = false; renderPhotos();
+}
+async function loadAlbums() {
+  const st = await mergedStack(['Photos']).catch(() => null);
+  if (!st || st.length < 2) { PH.albums = []; PH.root = null; if (mode === 'photos') renderPhotos(); return; }
+  PH.root = st[1];
+  const res = await Promise.allSettled(st[1].refs.map(async r => ({ email: r.email, items: (await api(accBy(r.email), 'files?' + qs({ q: `'${r.id}' in parents and mimeType='${FOLDER}' and trashed=false`, fields: 'files(id,name,mimeType,modifiedTime)', pageSize: 200 }))).files })));
+  PH.albums = merge(res.filter(x => x.status === 'fulfilled').map(x => x.value)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (mode === 'photos') renderPhotos();
+  // a cover photo for each album
+  await Promise.allSettled(PH.albums.map(async al => {
+    for (const r of al.refs) { const x = await api(accBy(r.email), 'files?' + qs({ q: `'${r.id}' in parents and mimeType contains 'image/' and trashed=false`, orderBy: 'createdTime desc', fields: 'files(thumbnailLink)', pageSize: 1 })); if (x.files[0]) { al.cover = x.files[0]; break; } }
+  }));
+  if (mode === 'photos') renderPhotos();
+}
+const PH_IC = {
+  plus: '<path d="M12 5v14M5 12h14"/>', back: '<path d="M15 18l-6-6 6-6"/>', play: '<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  share: '<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>', download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  album: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  prev: '<path d="M15 18l-6-6 6-6"/>', next: '<path d="M9 18l6-6-6-6"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+};
+const phI = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PH_IC[k]}</svg>`;
+function renderPhotos() {
+  if (mode !== 'photos' || searchQ) return;
+  const el = $('#list');
+  const chip = (k, t) => `<button class="ph-chip${PH.filter === k ? ' on' : ''}" data-phf="${k}">${t}</button>`;
+  let h = '<div class="ph">';
+  if (PH.album) h += `<div class="ph-head"><button class="ph-back" data-phback aria-label="All photos">${phI('back')}</button><div><h2>${escH(PH.album.name)}</h2><small>Album · ${PH.loading ? '…' : PH.items.length + (PH.more ? '+' : '') + ' items'}</small></div><button class="ph-sharealb" data-phsharealb>${phI('link', 16)}Share album</button></div>`;
+  else h += `<div class="ph-head"><div><h2>Photos</h2><small>${PH.loading ? 'Loading…' : PH.items.length + (PH.more ? '+' : '') + ' photos and videos from all accounts'}</small></div></div>`;
+  h += `<div class="ph-chips">${chip('all', 'All')}${chip('videos', 'Videos')}${chip('shots', 'Screenshots')}</div>`;
+  if (!PH.album) {
+    h += '<div class="ph-sec">Albums</div><div class="ph-albums"><button class="ph-alb new" data-phnew><span class="cov">' + phI('plus', 28) + '</span><b>New album</b><small>Name it, pick photos</small></button>';
+    if (PH.albums === null) h += '<div class="ph-alb"><span class="cov"></span><small>Loading…</small></div>';
+    else PH.albums.forEach((al, i) => { h += `<button class="ph-alb" data-pha="${i}"><span class="cov"${al.cover ? ` style="background-image:url('${escH(phThumb(al.cover, 300))}')"` : ''}></span><b>${escH(al.name)}</b><small>${al.refs.length > 1 ? al.refs.length + ' accounts' : 'Album'}</small></button>`; });
+    h += '</div>';
+  }
+  if (PH.loading) h += '<div class="spinner"></div>';
+  else if (!PH.items.length) h += `<div class="list empty"><h3>${PH.album ? 'This album is empty' : 'No photos yet'}</h3><p>Tap <b>Add photos</b>${PH.album ? '' : ', or share photos from your Gallery to PoolDrive'}.</p></div>`;
+  else {
+    let cur = '';
+    PH.items.forEach((f, i) => {
+      const d = phDate(f), mk = d.slice(0, 7);
+      if (mk !== cur) { if (cur) h += '</div>'; cur = mk; const dt = new Date(mk + '-01T00:00:00'); h += `<div class="ph-sec">${isNaN(dt) ? 'Undated' : dt.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div><div class="ph-grid">`; }
+      const t = phThumb(f, 400);
+      h += `<button class="ph-t" data-phi="${i}" aria-label="${escH(f.name)}">${t ? `<img loading="lazy" src="${escH(t)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<span class="nm">${escH(f.name)}</span>${isVid(f) ? `<span class="vid">${phI('play', 14)}</span>` : ''}</button>`;
+    });
+    if (cur) h += '</div>';
+    if (PH.more) h += '<div style="text-align:center;margin:18px 0"><button data-phmore>Show more</button></div>';
+  }
+  el.innerHTML = h + '</div>';
+}
+$('#list').addEventListener('click', e => {
+  if (mode !== 'photos' || searchQ) return;
+  const b = e.target.closest('[data-phf],[data-phback],[data-phnew],[data-pha],[data-phi],[data-phmore],[data-phsharealb]'); if (!b) return;
+  if (b.dataset.phf) { PH.filter = b.dataset.phf; loadPhotos(); }
+  else if (b.hasAttribute('data-phback')) { PH.album = null; loadPhotos(); }
+  else if (b.hasAttribute('data-phnew')) newAlbum();
+  else if (b.dataset.pha) { PH.album = PH.albums[+b.dataset.pha]; window.scrollTo(0, 0); loadPhotos(); }
+  else if (b.dataset.phi) openPhoto(+b.dataset.phi);
+  else if (b.hasAttribute('data-phmore')) loadPhotos(true);
+  else if (b.hasAttribute('data-phsharealb')) shareLinkDialog(PH.album);
+});
+// pick photos, then upload them into Photos (or an album inside it)
+let phTarget = ['Photos'];
+const phInput = document.createElement('input'); phInput.type = 'file'; phInput.multiple = true; phInput.accept = 'image/*,video/*'; phInput.hidden = true; document.body.appendChild(phInput);
+async function addPhotos(names) {
+  if (!live().length) return toast(accounts.length ? 'Reconnect an account first' : 'Add a Google account first', true);
+  phTarget = names || (PH.album ? ['Photos', PH.album.name] : ['Photos']); phInput.click();
+}
+phInput.onchange = async () => {
+  const files = [...phInput.files]; phInput.value = ''; if (!files.length) return;
+  try {
+    const a = live().slice().sort((x, y) => freeOf(y) - freeOf(x))[0];
+    await ensureFolderPath(a, phTarget);
+    stack = await mergedStack(phTarget);
+    startUpload(files.map(f => ({ file: f, dirs: [] })));
+  } catch (e) { handleErr(e); }
+};
+async function newAlbum() {
+  const n = prompt('Album name'); if (!n || !n.trim()) return;
+  const name = n.trim().replace(/[\\/]/g, '-');
+  try {
+    const a = live().slice().sort((x, y) => freeOf(y) - freeOf(x))[0]; if (!a) return toast('Reconnect an account first', true);
+    await ensureFolderPath(a, ['Photos', name]);
+    PH.album = { kind: 'folder', name, refs: (await mergedStack(['Photos', name])).slice(-1)[0].refs };
+    PH.albums = null; loadPhotos(); addPhotos(['Photos', name]);
+  } catch (e) { handleErr(e); }
+}
+// full-screen viewer
+let phCur = -1;
+function openPhoto(i) {
+  phCur = i; const f = PH.items[i]; if (!f) return;
+  if (isVid(f)) return openItem(f);
+  showModal(`<div class="pv-dark"><div class="pv-top"><button data-close aria-label="Close">${phI('close')}</button><div class="pv-t"><b>${escH(f.name)}</b><small>${escH(new Date(phDate(f)).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }))} · ${i + 1} of ${PH.items.length}</small></div></div>
+    <div class="pv-img" id="pvImg"><div class="spinner"></div></div>
+    <button class="pv-nav l" data-pvn="-1" aria-label="Previous"${i ? '' : ' disabled'}>${phI('prev', 26)}</button><button class="pv-nav r" data-pvn="1" aria-label="Next"${i < PH.items.length - 1 ? '' : ' disabled'}>${phI('next', 26)}</button>
+    <div class="pv-bar"><button data-pva="share">${phI('share')}Share</button><button data-pva="download">${phI('download')}Download</button><button data-pva="album">${phI('album')}Move to album</button><button data-pva="delete">${phI('trash')}Delete</button></div></div>`, 'photo', { wide: true });
+  $('#sheet').classList.add('dark');
+  const box = $('#pvImg'), img = new Image(); img.alt = f.name; img.referrerPolicy = 'no-referrer';
+  img.onload = () => { box.innerHTML = ''; box.appendChild(img); };
+  img.onerror = async () => {   // no thumbnail: load the original
+    try { const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true }); const u = URL.createObjectURL(await r.blob()); img.onerror = null; img.dataset.url = u; img.src = u; } catch (e) { box.innerHTML = '<p style="color:#bbb">Could not load this photo.</p>'; }
+  };
+  img.src = phThumb(f, 1600) || 'data:,';
+  if (!phThumb(f, 1600)) img.onerror();
+}
+document.addEventListener('click', async e => {
+  if ($('#modal').dataset.view !== 'photo') return;
+  const n = e.target.closest('[data-pvn]'); if (n) { const j = phCur + +n.dataset.pvn; if (PH.items[j]) openPhoto(j); return; }
+  const b = e.target.closest('[data-pva]'); if (!b) return;
+  const f = PH.items[phCur]; if (!f) return;
+  if (b.dataset.pva === 'share') shareFile(f);
+  else if (b.dataset.pva === 'download') downloadFile(f);
+  else if (b.dataset.pva === 'delete') { if (await deleteItems([f])) { closeModal(); } }
+  else if (b.dataset.pva === 'album') {
+    const names = (PH.albums || []).map(a => a.name);
+    const pick = prompt('Move to which album?' + (names.length ? '\n\nYour albums: ' + names.join(', ') : '') + '\n\nType a name (a new one is created if needed):', PH.album ? PH.album.name : (names[0] || ''));
+    if (!pick || !pick.trim()) return;
+    closeModal(); await moveItems([f], ['Photos', pick.trim().replace(/[\\/]/g, '-')]); PH.albums = null; loadAlbums();
+  }
+});
+addEventListener('keydown', e => { if ($('#modal').dataset.view !== 'photo') return; if (e.key === 'ArrowLeft' && PH.items[phCur - 1]) openPhoto(phCur - 1); if (e.key === 'ArrowRight' && PH.items[phCur + 1]) openPhoto(phCur + 1); });
+{ let sx = null; document.addEventListener('touchstart', e => { if ($('#modal').dataset.view === 'photo') sx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => { if (sx === null || $('#modal').dataset.view !== 'photo') return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) { const j = phCur + (dx < 0 ? 1 : -1); if (PH.items[j]) openPhoto(j); } }, { passive: true }); }
 
 /* ---------------- Start ---------------- */
 const setHH = () => document.documentElement.style.setProperty('--hh', ($('.mobile-top').offsetHeight || 0) + 'px');
