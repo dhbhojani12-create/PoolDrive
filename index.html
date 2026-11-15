@@ -1603,9 +1603,15 @@ async function deleteItems(its) {
   if (!confirm(`${msg}${many ? `\n\nThis folder exists in ${one.refs.length} accounts. All parts will be moved to trash.` : ''}\n\nYou can restore from Google Drive's Trash for 30 days.`)) return;
   try {
     const targets = its.flatMap(it => it.kind === 'folder' ? it.refs : [{ email: it.email, id: it.id }]);
-    await Promise.all(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
-    selected.clear(); fcache.clear(); toast('Moved to trash (it still uses space until the trash is emptied)'); reload();
-    return true;
+    const res = await Promise.allSettled(targets.map(r => api(accBy(r.email), `files/${r.id}?fields=id`, jsonOpts('PATCH', { trashed: true }))));
+    const bad = res.filter(x => x.status === 'rejected'), ok = res.length - bad.length;
+    if (bad.some(x => x.reason instanceof AuthErr)) handleErr(bad.find(x => x.reason instanceof AuthErr).reason);
+    selected.clear(); fcache.clear();
+    if (!bad.length) toast('Moved to trash (it still uses space until the trash is emptied)');
+    else if (/permission/i.test(String(bad[0].reason && bad[0].reason.message))) toast(`${ok ? ok + ' moved to trash. ' : ''}${bad.length} could not be deleted: they belong to someone else who shared them with you.`, true);
+    else toast(`${ok ? ok + ' moved to trash. ' : ''}${bad.length} could not be deleted: ${bad[0].reason && bad[0].reason.message || 'error'}`, true);
+    reload();
+    return !bad.length;
   } catch (e) { handleErr(e); }
 }
 const deleteItem = it => deleteItems([it]);
@@ -2144,9 +2150,9 @@ const phDate = f => { const t = f.imageMediaMetadata && f.imageMediaMetadata.tim
 const phThumb = (f, s) => f.thumbnailLink ? f.thumbnailLink.replace(/=s\d+(-[a-z0-9-]+)?$/i, '') + '=s' + s : '';
 const isVid = f => (f.mimeType || '').startsWith('video/');
 function phQuery(email) {
-  let q = "(mimeType contains 'image/' or mimeType contains 'video/') and trashed=false";
-  if (PH.filter === 'videos') q = "mimeType contains 'video/' and trashed=false";
-  if (PH.filter === 'shots') q = "mimeType contains 'image/' and name contains 'Screenshot' and trashed=false";
+  let q = "(mimeType contains 'image/' or mimeType contains 'video/') and trashed=false and 'me' in owners";
+  if (PH.filter === 'videos') q = "mimeType contains 'video/' and trashed=false and 'me' in owners";
+  if (PH.filter === 'shots') q = "mimeType contains 'image/' and name contains 'Screenshot' and trashed=false and 'me' in owners";
   if (PH.album) { const r = PH.album.refs.filter(x => x.email === email); if (!r.length) return null; q += ' and (' + r.map(x => `'${x.id}' in parents`).join(' or ') + ')'; }
   return q;
 }
