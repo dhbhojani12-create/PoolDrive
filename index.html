@@ -346,6 +346,22 @@ body[data-mode="photos"] .vtoggle,body[data-mode="photos"] .actions,body[data-mo
 .ph-selbar{position:fixed;left:50%;transform:translateX(-50%);width:max-content;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;padding:8px 10px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 20px);flex-wrap:wrap;justify-content:center}
 .ph-selbar b{padding:0 6px;font-size:14px;white-space:nowrap}@media (max-width:760px){.ph-selbar{left:10px;right:10px;transform:none;width:auto;flex-wrap:nowrap;justify-content:space-between;gap:6px}.ph-selbar button{padding:8px 10px}}.ph-selbar button{display:flex;align-items:center;gap:6px;font-size:13.5px}.ph-selbar .danger{color:#fff;background:var(--danger);border-color:var(--danger)}
 body.phsel .fab{display:none}.ph{padding-bottom:90px}
+body[data-mode="vault"] .vtoggle,body[data-mode="vault"] .actions,body[data-mode="vault"] #crumbs{display:none}
+.v-card{max-width:440px;margin:6px 0 20px;padding:20px;display:flex;flex-direction:column;gap:10px;background:var(--card);border-radius:18px;border:1px solid var(--line)}
+.v-card h3{margin:0;font-size:18px}.v-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.v-l{font-size:13px;font-weight:600;color:var(--muted);margin-top:4px}
+.v-pin{font-size:24px;letter-spacing:.5em;text-align:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);width:100%;box-sizing:border-box}
+.v-pin.big{font-size:30px;max-width:260px;align-self:center}.v-in{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:16px;letter-spacing:.08em}
+.v-lockcard{align-items:center;text-align:center}.v-ic{color:var(--accent)}.v-msg{min-height:20px;color:var(--danger)!important}
+.v-code{font:600 20px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.06em;padding:14px;border-radius:12px;background:var(--accent-soft);color:var(--accent);text-align:center;word-break:break-all}
+.v-ok{display:flex;gap:8px;align-items:center;font-size:14px}
+.lnk{border:0;background:none;color:var(--accent);font-weight:600;padding:6px}
+.v-actions{display:flex;gap:8px;margin-bottom:12px}.v-actions .primary{display:flex;align-items:center;gap:6px}
+.v-list{padding:0}.v-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}.v-row:last-child{border-bottom:0}
+.v-row .ic{width:38px;height:38px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:10px;font-weight:700;flex:none}
+.v-nm{flex:1;min-width:0;display:flex;flex-direction:column}.v-nm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.v-nm small{color:var(--muted);font-size:12px}
+.v-row button{padding:7px 10px}.v-del{color:var(--danger)}
+.shake{animation:vshake .35s}@keyframes vshake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 </style>
 </head>
 <body>
@@ -362,6 +378,7 @@ body.phsel .fab{display:none}.ph{padding-bottom:90px}
     <button data-nav="photos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>Photos</button>
     <button data-nav="recent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent</button>
     <button data-nav="locked"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked folders</button>
+    <button data-nav="vault"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/></svg>Vault</button>
     <button data-nav="analysis"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
     <button data-nav="trash"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Trash</button>
   </nav>
@@ -380,7 +397,7 @@ body.phsel .fab{display:none}.ph{padding-bottom:90px}
     <div><div class="st"><span><b id="mFree">—</b> free</span><span id="mTotal"></span></div><div class="segbar" id="mBar" style="height:6px;margin-top:6px"></div></div>
   </div>
   <div class="mnav" aria-label="Sections">
-    <button data-nav="files" class="on">All files</button><button data-nav="photos">Photos</button><button data-nav="recent">Recent</button><button data-nav="locked">Locked</button><button data-nav="analysis">Analysis</button>
+    <button data-nav="files" class="on">All files</button><button data-nav="photos">Photos</button><button data-nav="recent">Recent</button><button data-nav="locked">Locked</button><button data-nav="vault">Vault</button><button data-nav="analysis">Analysis</button>
   </div>
   <div id="banner" class="banner hidden"></div>
   <main>
@@ -701,9 +718,11 @@ async function listChildren(a, id) {
   return out;
 }
 
+const isVaultF = f => !!(f.appProperties && (f.appProperties.pooldriveVault || f.appProperties.pooldriveVaultItem));
 function merge(groups) {
   const folders = new Map(), files = [];
   for (const { email, items } of groups) for (const f of items) {
+    if (isVaultF(f)) continue;   // the secret vault is only shown in Vault
     if (f.mimeType === FOLDER) {
       let e = folders.get(f.name);
       if (!e) { e = { kind: 'folder', name: f.name, refs: [], modifiedTime: f.modifiedTime }; folders.set(f.name, e); }
@@ -718,7 +737,7 @@ function merge(groups) {
 /* ---------------- Loading & search ---------------- */
 let items = [], view = [], loadSeq = 0, loading = false, searchQ = '';
 
-let mode = 'files';   // files | photos | recent | locked | analysis
+let mode = 'files';   // files | photos | vault | recent | locked | analysis
 function setMode(m) {
   if (m === 'trash') return trashMenu();
   mode = m; document.body.classList.remove('phsel');
@@ -742,7 +761,7 @@ async function loadRecent() {
   const seq = ++loadSeq; loading = true; renderList();
   const res = await Promise.allSettled(live().map(async a => {
     const r = await api(a, 'files?' + qs({ q: `trashed=false and mimeType!='${FOLDER}' and 'me' in owners`, orderBy: 'modifiedTime desc', fields: `files(${FIELDS})`, pageSize: 50 }));
-    return r.files.map(f => ({ kind: 'file', ...f, email: a.email, fromSearch: true }));
+    return r.files.filter(f => !isVaultF(f)).map(f => ({ kind: 'file', ...f, email: a.email, fromSearch: true }));
   }));
   if (seq !== loadSeq) return;
   items = res.filter(x => x.status === 'fulfilled').flatMap(x => x.value)
@@ -772,6 +791,7 @@ async function reload() {
   if (!accounts.length) { items = []; return renderList(); }
   if (mode === 'analysis') return renderAnalysis();
   if (mode === 'photos' && !searchQ) return loadPhotos();
+  if (mode === 'vault' && !searchQ) return renderVault();
   if (mode === 'recent' && !searchQ) return loadRecent();
   if (mode === 'locked' && !searchQ) return loadLocked();
   if (searchQ) return doSearch();
@@ -798,7 +818,7 @@ async function doSearch() {
   items = [];
   res.forEach(x => {
     if (x.status !== 'fulfilled') return;
-    for (const f of x.value.items) items.push(f.mimeType === FOLDER
+    for (const f of x.value.items) if (!isVaultF(f)) items.push(f.mimeType === FOLDER
       ? { kind: 'folder', name: f.name, refs: [{ email: x.value.email, id: f.id }], modifiedTime: f.modifiedTime, fromSearch: true, email: x.value.email, id: f.id, parents: f.parents, locked: isLockedF(f) }
       : { kind: 'file', ...f, email: x.value.email, fromSearch: true });
   });
@@ -931,6 +951,7 @@ function renderList() {
   if (loading) { el.innerHTML = '<div class="list"><div class="spinner"></div></div>'; return; }
   if (mode === 'analysis' && !searchQ) return renderAnalysis();
   if (mode === 'photos' && !searchQ) return renderPhotos();
+  if (mode === 'vault' && !searchQ) return renderVault();
   view = sortedItems();
   if (!view.length) {
     const msg = searchQ ? `<h3>No matches</h3><p>Nothing named “${escH(searchQ)}” in any connected account.</p>`
@@ -1993,8 +2014,8 @@ $('#search').addEventListener('input', e => {
 });
 $('#sort').value = cfg.sort;
 $('#sort').onchange = e => { cfg.sort = e.target.value; saveCfg(); renderList(); };
-$('#btnUpload').onclick = e => { e.stopPropagation(); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
-$('#fabUpload').onclick = e => { e.stopPropagation(); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
+$('#btnUpload').onclick = e => { e.stopPropagation(); if (mode === 'vault' && !searchQ) return VLT.key ? vInput.click() : toast('Unlock the vault first'); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
+$('#fabUpload').onclick = e => { e.stopPropagation(); if (mode === 'vault' && !searchQ) return VLT.key ? vInput.click() : toast('Unlock the vault first'); if (mode === 'photos' && !searchQ) return addPhotos(); uploadMenu(e.currentTarget); };
 $('#mNewFolder').onclick = newFolder;
 $('#mAccounts').onclick = showAccounts;
 $('#accList').addEventListener('click', e => { if (e.target.closest('.acc-more')) showAccounts(); });
@@ -2193,7 +2214,7 @@ const PH_IC = {
   plus: '<path d="M12 5v14M5 12h14"/>', back: '<path d="M15 18l-6-6 6-6"/>', play: '<path d="M8 5v14l11-7z" fill="currentColor"/>',
   share: '<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>', download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   album: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
-  prev: '<path d="M15 18l-6-6 6-6"/>', check: '<path d="M5 12l5 5 9-10"/>', next: '<path d="M9 18l6-6-6-6"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+  prev: '<path d="M15 18l-6-6 6-6"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', check: '<path d="M5 12l5 5 9-10"/>', next: '<path d="M9 18l6-6-6-6"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
 };
 const phI = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PH_IC[k]}</svg>`;
 function renderPhotos() {
@@ -2316,6 +2337,163 @@ document.addEventListener('click', async e => {
 addEventListener('keydown', e => { if ($('#modal').dataset.view !== 'photo') return; if (e.key === 'ArrowLeft' && PH.items[phCur - 1]) openPhoto(phCur - 1); if (e.key === 'ArrowRight' && PH.items[phCur + 1]) openPhoto(phCur + 1); });
 { let sx = null; document.addEventListener('touchstart', e => { if ($('#modal').dataset.view === 'photo') sx = e.touches[0].clientX; }, { passive: true });
   document.addEventListener('touchend', e => { if (sx === null || $('#modal').dataset.view !== 'photo') return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) { const j = phCur + (dx < 0 ? 1 : -1); if (PH.items[j]) openPhoto(j); } }, { passive: true }); }
+
+/* ---------------- Secret vault ----------------
+   Files are encrypted on this device (AES-256-GCM) before they go to Google Drive, so in Drive
+   they are unreadable "….pdv" files. A random vault key is locked twice: with your 6-digit PIN
+   and with a recovery code (shown once). Only the locked copies are stored (pooldrive-vault.json,
+   one in every account). Nothing readable ever leaves this device. */
+const VLT = { cfg: null, key: null, items: null, folder: 'PoolDrive Vault', t: 0, tries: 0, wait: 0, step: '' };
+const VLT_ITER = 600000;
+const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const rnd = n => crypto.getRandomValues(new Uint8Array(n));
+async function vKek(secret, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: VLT_ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function vSeal(key, data) { const iv = rnd(12); const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data); const o = new Uint8Array(12 + ct.byteLength); o.set(iv); o.set(new Uint8Array(ct), 12); return o; }
+async function vOpen(key, data) { data = new Uint8Array(data); return crypto.subtle.decrypt({ name: 'AES-GCM', iv: data.slice(0, 12) }, key, data.slice(12)); }
+const vRecCode = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = rnd(20); return [...r].map(x => A[x % A.length]).join('').match(/.{5}/g).join('-'); };
+const vNorm = c => c.toUpperCase().replace(/[^A-Z0-9]/g, '').match(/.{1,5}/g)?.join('-') || '';
+async function vWrap(raw, secret) { const salt = rnd(16); return { salt: b64(salt), box: b64(await vSeal(await vKek(secret, salt), raw)) }; }
+async function vUnwrap(w, secret) { return vOpen(await vKek(secret, unb64(w.salt)), unb64(w.box)); }
+async function vUseRaw(raw) { VLT.key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']); vTouch(); }
+function vTouch() { VLT.t = Date.now(); }
+function vLock() { VLT.key = null; VLT.items = null; if (mode === 'vault') renderVault(); }
+setInterval(() => { if (VLT.key && Date.now() - VLT.t > 5 * 60e3) vLock(); }, 20e3);
+document.addEventListener('visibilitychange', () => { if (document.hidden && VLT.key) VLT.hide = Date.now(); else if (VLT.hide && Date.now() - VLT.hide > 60e3) { VLT.hide = 0; vLock(); } });
+async function vFolder(a, make) {
+  const r = await api(a, 'files?' + qs({ q: `appProperties has { key='pooldriveVault' and value='1' } and trashed=false`, fields: 'files(id)', pageSize: 1 }));
+  if (r.files[0]) return r.files[0].id;
+  if (!make) return null;
+  return (await api(a, 'files?fields=id', jsonOpts('POST', { name: VLT.folder, mimeType: FOLDER, parents: ['root'], appProperties: { pooldriveVault: '1' }, description: 'Encrypted by PoolDrive. Open it from PoolDrive → Vault.' }))).id;
+}
+async function vLoadCfg() {
+  for (const a of live()) {
+    try {
+      const r = await api(a, 'files?' + qs({ q: `appProperties has { key='pooldriveVault' and value='config' } and trashed=false`, fields: 'files(id,modifiedTime)', orderBy: 'modifiedTime desc', pageSize: 1 }));
+      if (r.files[0]) return JSON.parse(await (await api(a, `files/${r.files[0].id}?alt=media`, { raw: true })).text());
+    } catch (e) { if (!(e instanceof AuthErr)) console.warn(e); }
+  }
+  return false;
+}
+async function vSaveCfg(cfgObj) {   // a copy in every account, so the vault still opens if one account is removed
+  const body = JSON.stringify(cfgObj);
+  await Promise.all(live().map(async a => {
+    const fid = await vFolder(a, true);
+    const r = await api(a, 'files?' + qs({ q: `appProperties has { key='pooldriveVault' and value='config' } and trashed=false`, fields: 'files(id)' }));
+    if (r.files[0]) await api(a, `${UPLOAD}/${r.files[0].id}?uploadType=media&fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
+    else { const id = JSON.parse(await uploadFile(a, new Blob([body], { type: 'application/json' }), fid, () => {}, 'pooldrive-vault.json')).id;
+      await api(a, `files/${id}?fields=id`, jsonOpts('PATCH', { appProperties: { pooldriveVault: 'config' } })); }
+  }));
+  VLT.cfg = cfgObj;
+}
+async function vLoadItems() {
+  const res = await Promise.allSettled(live().map(async a => {
+    const r = await api(a, 'files?' + qs({ q: `appProperties has { key='pooldriveVaultItem' and value='1' } and trashed=false`, fields: 'files(id,size,createdTime,description)', pageSize: 1000 }));
+    return Promise.all(r.files.map(async f => { let meta = { name: '(unreadable)', type: '' }; try { meta = JSON.parse(new TextDecoder().decode(await vOpen(VLT.key, unb64(String(f.description || '').replace(/^pdv1:/, ''))))); } catch {} return { ...f, email: a.email, meta }; }));
+  }));
+  VLT.items = res.filter(x => x.status === 'fulfilled').flatMap(x => x.value).sort((x, y) => (y.createdTime || '').localeCompare(x.createdTime || ''));
+  if (mode === 'vault') renderVault();
+}
+function renderVault() {
+  if (mode !== 'vault' || searchQ) return;
+  const el = $('#list');
+  const head = sub => `<div class="ph-head"><div><h2>🔒 Vault</h2><small>${sub}</small></div>${VLT.key ? '<button data-v="lock" class="ph-selbtn">Lock</button>' : ''}</div>`;
+  if (!live().length) { el.innerHTML = head('') + '<div class="list empty"><h3>Reconnect your accounts</h3><p>The vault needs at least one signed-in account.</p></div>'; return; }
+  if (VLT.cfg === null) { el.innerHTML = head('Checking…') + '<div class="spinner"></div>'; vLoadCfg().then(c => { VLT.cfg = c; renderVault(); }); return; }
+  if (VLT.step === 'code') {   // just created: show the recovery code once
+    el.innerHTML = head('Save your recovery code') + `<div class="card v-card"><h3>Your recovery code</h3><p>If you forget your PIN, this code is the <b>only</b> way to open the vault. Write it down or keep it in a safe place (not in the vault).</p>
+      <div class="v-code">${escH(VLT.code)}</div><div class="right" style="justify-content:flex-start;gap:8px"><button data-v="copycode">Copy</button></div>
+      <label class="v-ok"><input type="checkbox" id="vSaved"> I have saved my recovery code</label><button class="primary" data-v="codedone" disabled id="vDone">Open my vault</button></div>`;
+    $('#vSaved').onchange = e => $('#vDone').disabled = !e.target.checked; return;
+  }
+  if (!VLT.cfg || VLT.step === 'newpin' || VLT.step === 'reset') {
+    const reset = VLT.step === 'reset';
+    el.innerHTML = head(reset ? 'Set a new PIN' : 'Keep important documents locked') + `<div class="card v-card">${reset ? '' : `<h3>Create your secret vault</h3><p>Files you add are <b>encrypted on this device</b> before they go to Google Drive. In Drive they can't be opened by anyone, even if someone gets into your Google account.</p>`}
+      <label class="v-l" for="vP1">${reset ? 'New' : 'Choose a'} 6-digit PIN</label><input id="vP1" class="v-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      <label class="v-l" for="vP2">Type it again</label><input id="vP2" class="v-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      <button class="primary" data-v="create">${reset ? 'Save new PIN' : 'Create vault'}</button>${reset ? '<button data-v="cancelreset" style="margin-left:8px">Cancel</button>' : ''}</div>`;
+    return;
+  }
+  if (!VLT.key) {
+    const rec = VLT.step === 'recover';
+    el.innerHTML = head('Locked') + `<div class="card v-card v-lockcard">${rec
+      ? `<h3>Use your recovery code</h3><label class="v-l" for="vRec">Recovery code</label><input id="vRec" class="v-in" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" autocapitalize="characters"><button class="primary" data-v="recover">Continue</button><button class="lnk" data-v="back">Back to PIN</button>`
+      : `<div class="v-ic">${phI('lock', 34)}</div><h3>Enter your PIN</h3><input id="vPin" class="v-pin big" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" aria-label="6-digit PIN"><p id="vMsg" class="v-msg"></p><button class="lnk" data-v="forgot">Forgot PIN? Use recovery code</button>`}</div>`;
+    const pin = $('#vPin'); if (pin) { pin.focus(); pin.oninput = () => { if (/^\d{6}$/.test(pin.value)) vUnlock(pin.value); }; }
+    return;
+  }
+  vTouch();
+  if (VLT.items === null) { el.innerHTML = head('Opening…') + '<div class="spinner"></div>'; vLoadItems(); return; }
+  el.innerHTML = head(`${VLT.items.length} document${VLT.items.length === 1 ? '' : 's'} · locks itself after 5 minutes`) +
+    `<div class="v-actions"><button class="primary" data-v="add">${phI('plus', 18)}Add documents</button><button data-v="chpin">Change PIN</button></div>` +
+    (VLT.items.length ? '<div class="list v-list">' + VLT.items.map((f, i) => `<div class="v-row"><span class="ic" style="--c:#4f46e5">${escH(((f.meta.name.split('.').pop() || 'file').slice(0, 4)).toUpperCase())}</span><div class="v-nm"><b>${escH(f.meta.name)}</b><small>${fmt(+f.meta.size || +f.size || 0)} · ${fmtDate(f.createdTime)}</small></div>
+      <button data-vo="${i}">Open</button><button data-vd="${i}" aria-label="Download ${escH(f.meta.name)}">${phI('download', 18)}</button><button data-vx="${i}" aria-label="Delete ${escH(f.meta.name)}" class="v-del">${phI('trash', 18)}</button></div>`).join('') + '</div>'
+      : '<div class="list empty"><h3>Your vault is empty</h3><p>Add Aadhaar, PAN, passport, certificates or anything private.</p></div>');
+}
+async function vUnlock(pin) {
+  const msg = $('#vMsg');
+  if (Date.now() < VLT.wait) { if (msg) msg.textContent = 'Too many tries. Wait ' + Math.ceil((VLT.wait - Date.now()) / 1000) + ' s.'; return; }
+  if (msg) msg.textContent = 'Opening…';
+  try { await vUseRaw(await vUnwrap(VLT.cfg.pin, pin)); VLT.tries = 0; VLT.items = null; renderVault(); }
+  catch { VLT.tries++; if (VLT.tries >= 5) { VLT.wait = Date.now() + 30e3; VLT.tries = 0; } const p = $('#vPin'); if (p) { p.value = ''; p.classList.add('shake'); setTimeout(() => p.classList.remove('shake'), 400); } if (msg) msg.textContent = 'Wrong PIN'; }
+}
+const vInput = document.createElement('input'); vInput.type = 'file'; vInput.multiple = true; vInput.hidden = true; document.body.appendChild(vInput);
+vInput.onchange = async () => {
+  const files = [...vInput.files]; vInput.value = ''; if (!files.length || !VLT.key) return;
+  let n = 0;
+  for (const f of files) {
+    toast(`Encrypting and uploading ${++n} of ${files.length}…`);
+    try {
+      const a = live().filter(x => freeOf(x) > f.size + MARGIN).sort((x, y) => freeOf(y) - freeOf(x))[0]; if (!a) { toast(`No account has room for ${f.name}`, true); continue; }
+      const enc = await vSeal(VLT.key, await f.arrayBuffer()); vTouch();
+      const desc = 'pdv1:' + b64(await vSeal(VLT.key, new TextEncoder().encode(JSON.stringify({ name: f.name, type: f.type, size: f.size }))));
+      const id = JSON.parse(await uploadFile(a, new Blob([enc], { type: 'application/octet-stream' }), await vFolder(a, true), () => vTouch(), Math.random().toString(36).slice(2, 12) + '.pdv')).id;
+      await api(a, `files/${id}?fields=id`, jsonOpts('PATCH', { description: desc, appProperties: { pooldriveVaultItem: '1' } }));
+      a.usage = (a.usage || 0) + enc.length;
+    } catch (e) { handleErr(e); }
+  }
+  saveAcc(); renderSpace(); toast('Saved in your vault'); VLT.items = null; renderVault();
+};
+async function vGet(f) { vTouch(); const r = await api(accBy(f.email), `files/${f.id}?alt=media`, { raw: true }); return new Blob([await vOpen(VLT.key, await r.arrayBuffer())], { type: f.meta.type || 'application/octet-stream' }); }
+$('#list').addEventListener('click', async e => {
+  if (mode !== 'vault' || searchQ) return;
+  const b = e.target.closest('[data-v],[data-vo],[data-vd],[data-vx]'); if (!b) return;
+  const v = b.dataset.v, F = VLT.items || [];
+  try {
+    if (v === 'lock') vLock();
+    else if (v === 'create') {
+      const p1 = $('#vP1').value, p2 = $('#vP2').value;
+      if (!/^\d{6}$/.test(p1)) return toast('The PIN must be exactly 6 digits', true);
+      if (p1 !== p2) return toast("The two PINs don't match", true);
+      b.disabled = true; b.textContent = 'Locking…';
+      if (VLT.step === 'reset') { const raw = VLT.raw; await vSaveCfg({ ...VLT.cfg, pin: await vWrap(raw, p1), changed: Date.now() }); await vUseRaw(raw); VLT.raw = null; VLT.step = ''; toast('New PIN saved'); VLT.items = null; return renderVault(); }
+      const raw = rnd(32), code = vRecCode();
+      await vSaveCfg({ v: 1, app: 'PoolDrive vault', iter: VLT_ITER, pin: await vWrap(raw, p1), rec: await vWrap(raw, code.replace(/-/g, '')), created: Date.now() });
+      await vUseRaw(raw); VLT.code = code; VLT.step = 'code'; VLT.items = []; renderVault();
+    }
+    else if (v === 'copycode') { await navigator.clipboard.writeText(VLT.code).catch(() => {}); toast('Copied. Paste it somewhere safe.'); }
+    else if (v === 'codedone') { VLT.code = ''; VLT.step = ''; renderVault(); }
+    else if (v === 'forgot') { VLT.step = 'recover'; renderVault(); }
+    else if (v === 'back' || v === 'cancelreset') { VLT.step = ''; VLT.raw = null; renderVault(); }
+    else if (v === 'recover') {
+      const c = vNorm($('#vRec').value).replace(/-/g, ''); if (c.length !== 20) return toast('The recovery code has 20 letters and numbers', true);
+      b.disabled = true; try { VLT.raw = new Uint8Array(await vUnwrap(VLT.cfg.rec, c)); VLT.step = 'reset'; renderVault(); } catch { b.disabled = false; toast("That recovery code doesn't match", true); }
+    }
+    else if (v === 'chpin') { VLT.raw = null; const old = prompt('Enter your current PIN'); if (!old) return; try { VLT.raw = new Uint8Array(await vUnwrap(VLT.cfg.pin, old)); VLT.step = 'reset'; renderVault(); } catch { toast('Wrong PIN', true); } }
+    else if (v === 'add') vInput.click();
+    else if (b.dataset.vo) { const f = F[+b.dataset.vo]; toast('Opening…'); const blob = await vGet(f); const u = URL.createObjectURL(blob);
+      if (/^image\//.test(blob.type) || blob.type === 'application/pdf' || /^text\//.test(blob.type)) {
+        showModal(`<div class="sheet-head"><div class="t">🔒 ${escH(f.meta.name)}</div><button id="vpDl">Download</button><button data-close>✕</button></div><div class="pv">${blob.type === 'application/pdf' ? `<iframe src="${u}" data-url="${u}"></iframe>` : /^image\//.test(blob.type) ? `<img src="${u}" data-url="${u}" alt="">` : `<pre data-url="${u}">${escH(await blob.text())}</pre>`}</div>`, 'preview', { wide: true });
+        $('#vpDl').onclick = () => { const x = document.createElement('a'); x.href = u; x.download = f.meta.name; x.click(); };
+      } else { const x = document.createElement('a'); x.href = u; x.download = f.meta.name; x.click(); setTimeout(() => URL.revokeObjectURL(u), 60000); } }
+    else if (b.dataset.vd) { const f = F[+b.dataset.vd]; toast('Decrypting…'); const u = URL.createObjectURL(await vGet(f)); const x = document.createElement('a'); x.href = u; x.download = f.meta.name; x.click(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+    else if (b.dataset.vx) { const f = F[+b.dataset.vx]; if (!confirm(`Delete “${f.meta.name}” from the vault?\n\nIt goes to Google Drive's Trash (still encrypted) for 30 days.`)) return;
+      await api(accBy(f.email), `files/${f.id}?fields=id`, jsonOpts('PATCH', { trashed: true })); toast('Deleted'); VLT.items = null; renderVault(); }
+  } catch (err) { handleErr(err); }
+});
 
 /* ---------------- Start ---------------- */
 const setHH = () => document.documentElement.style.setProperty('--hh', ($('.mobile-top').offsetHeight || 0) + 'px');
