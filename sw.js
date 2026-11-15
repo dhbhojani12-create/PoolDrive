@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
   // pages: network first, so updates show straight away; the saved copy is used when offline
   const home = new URL('./', self.registration.scope).pathname;   // only the PoolDrive page itself, not privacy.html or the app download
   if (e.request.mode === 'navigate' && u.origin === location.origin && u.pathname === home) {
-    e.respondWith(fetch(e.request).then(r => { const c = r.clone(); caches.open('pd-pages').then(k => k.put('./', c)); return r; })
+    e.respondWith(fetch(u.href, { cache: 'no-cache', credentials: 'same-origin' }).then(r => { const c = r.clone(); caches.open('pd-pages').then(k => k.put('./', c)); return r; })
       .catch(() => caches.match('./')));
   }
 });
